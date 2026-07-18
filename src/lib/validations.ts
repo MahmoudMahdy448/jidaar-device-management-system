@@ -118,5 +118,24 @@ export const UserSchema = z.object({
 export const AssignmentSchema = z.object({
   deviceId: z.string().uuid(),
   userId: z.string().uuid(),
+  assignedById: z.string().uuid().optional().nullable(),
   assignmentDate: z.coerce.date(),
+  expectedReturnDate: z.coerce.date().optional().nullable(),
+  conditionBefore: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+export const ReturnAssignmentSchema = z.object({
+  returnDate: z.coerce.date(),
+  closedReason: z.enum(["RETURNED", "LOST", "RETIRED", "DEACTIVATED"]),
+  conditionAfter: z.string().optional().nullable(),
+  needsMaintenance: z.boolean().optional().default(false),
+  notes: z.string().optional().nullable(),
+});
+
+export const TransferAssignmentSchema = z.object({
+  assignmentId: z.string().uuid(),
+  newUserId: z.string().uuid(),
+  transferDate: z.coerce.date(),
+  notes: z.string().optional().nullable(),
 });
