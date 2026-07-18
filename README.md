@@ -86,9 +86,9 @@ After seeding, you can log in with:
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@jidaar.com | password123 |
-| Technician | tech@jidaar.com | password123 |
-| Read Only | readonly@jidaar.com | password123 |
+| Admin | admin@jidaar.com | admin123 |
+| Technician | tech@jidaar.com | admin123 |
+| Read Only | readonly@jidaar.com | admin123 |
 
 ## Available Scripts
 
