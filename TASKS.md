@@ -182,6 +182,24 @@
 
 ---
 
+## Phase 12 — UI Re-theme: Jidaar Brand
+
+- [x] Replace default shadcn grayscale tokens with Jidaar brand color palette — done
+- [x] Swap Geist fonts for IBM Plex Sans (UI) + IBM Plex Mono (technical identifiers) — done
+- [x] Tighten base `--radius` token from 0.625rem to 0.4rem (~6px) — done
+- [x] Apply brand orange `#F26522` as single accent across sidebar, buttons, focus rings, KPI warranty card — done
+- [x] Sidebar: dark charcoal `#1E1E1F` background, orange active state, brand wordmark italic treatment — done
+- [x] Page background `#FAFAF7`, card surfaces `#FFFFFF` with `#E4E3DC` hairline borders — done
+- [x] Warranty warning tint: `#FDECD9` background / `#C2500F` text for accessible contrast — done
+- [x] IBM Plex Mono applied to asset ID, serial number, IP/MAC address, inventory number, employee ID — done
+- [x] Both light and dark mode updated consistently — done
+- [x] Status badge colors left unchanged (semantic, not brand) — done
+- [x] Updated ARCHITECTURE.md and DECISIONS_LOG.md — done
+
+**Acceptance for this phase:** Brand theme (charcoal sidebar, orange accent, IBM Plex Sans/Mono, tightened radius) is applied consistently across all pages in both light and dark mode. No component logic, data fetching, or routing changes. Build passes cleanly.
+
+---
+
 ## Completion Notes
 
 - **Completed:** July 18, 2026
@@ -192,3 +210,11 @@
 - docker-compose includes PostgreSQL, MinIO, and the app with proper health checks
 - Export button was already present on the assignments page (no changes needed)
 - `pnpm build` and `pnpm lint` pass successfully after all changes
+
+---
+
+## Next Task
+
+Re-theme complete. Awaiting next feature request.
+
+- Potential follow-ups: add Jidaar logo SVG to sidebar header (replacing the "J" monogram), implement data-driven device-type specification fields, add dark mode brand-specific chart colors, or begin E2E test coverage expansion.

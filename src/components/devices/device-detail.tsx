@@ -124,7 +124,7 @@ export function DeviceDetail({ device }: DeviceDetailProps) {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Inventory Number</span>
-              <span>{device.inventoryNumber ?? "—"}</span>
+              <span className="font-mono text-xs">{device.inventoryNumber ?? "—"}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Manufacturer</span>

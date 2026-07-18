@@ -51,3 +51,39 @@
 
 12. **Consistent color mapping** for status badges across entire app
     - **Why:** Prevents visual inconsistency. Green=available, Blue=assigned, Amber=maintenance, Gray=retired, Red=error. Defined once in ARCHITECTURE.md, never deviated from.
+
+---
+
+## Session 2 — Jidaar Brand UI Re-theme
+
+**Date:** 2026-07-18
+**Phase:** Phase 12 (UI Re-theme)
+
+### Decisions Made
+
+1. **IBM Plex Sans as primary UI font** (replacing Geist)
+   - **Why:** IBM Plex Sans has a more technical/industrial character appropriate for a construction company's asset management tool. Weights 400/500 for body, 700 for logo wordmark.
+   - **Rejected:** Inter (too generic), Geist (default, no brand personality).
+
+2. **IBM Plex Mono for technical identifiers only**
+   - **Why:** Mono font on asset IDs, serial numbers, IP/MAC addresses, and employee IDs improves scannability of machine-readable codes without polluting prose text.
+   - **Scope limitation:** Not applied to names, notes, or free-text fields.
+
+3. **Brand orange `#F26522` as single accent color**
+   - **Why:** Matches Jidaar's logo wordmark color. Used exclusively for: active sidebar nav, primary buttons, focus/ring states, warranty-expiring KPI highlight. One accent per view prevents visual noise.
+   - **Rejected:** Using orange for sidebar background (too aggressive); using raw `#F26522` as text color (fails WCAG contrast on light backgrounds).
+
+4. **Warranty warning tint: `#FDECD9` bg / `#C2500F` text**
+   - **Why:** Raw brand orange (`#F26522`) fails contrast on light backgrounds. `#C2500F` is a darker step that achieves ~6.2:1 contrast ratio, passing WCAG AA. Background `#FDECD9` is a warm tint that signals attention without screaming.
+
+5. **Sidebar: dark charcoal `#1E1E1F` background**
+   - **Why:** Dark sidebar is standard in admin UIs (Linear, Vercel, etc.). Charcoal keeps the sidebar visually distinct from the warm-paper page background without competing with the brand orange accent.
+
+6. **Border radius tightened to `0.4rem` (~6px)**
+   - **Why:** Default shadcn radius (0.625rem = 10px) feels soft/rounded. Tighter radius reads more precise/technical, consistent with the construction/industrial brand.
+
+7. **Page background `#FAFAF7` (warm paper)**
+   - **Why:** Pure white (`#FFFFFF`) feels clinical. The slight warm tint matches Jidaar's brand warmth while maintaining excellent readability. Cards remain pure `#FFFFFF` for surface contrast.
+
+8. **Status badge colors preserved unchanged**
+   - **Why:** Status colors (Available=green, Assigned=blue, etc.) are semantic and pre-date the brand pass. Recoloring them to match the brand orange would break the established visual language.

@@ -32,15 +32,15 @@ const cards = [
   { key: "assignedDevices", label: "Assigned", icon: UserCheck, color: "text-blue-600 dark:text-blue-400" },
   { key: "maintenanceDevices", label: "Under Maintenance", icon: Wrench, color: "text-orange-600 dark:text-orange-400" },
   { key: "retiredDevices", label: "Retired", icon: Trash2, color: "text-muted-foreground" },
-  { key: "warrantyExpiringSoon", label: "Warranty Expiring Soon", icon: AlertTriangle, color: "text-amber-600 dark:text-amber-400" },
+  { key: "warrantyExpiringSoon", label: "Warranty Expiring Soon", icon: AlertTriangle, color: "text-warning-foreground" },
 ] as const;
 
 export function KpiCards() {
-  const { data, isLoading } = useSWR<Stats>("/api/dashboard/stats", fetcher, {
+  const { data, isLoading } = useSWR<{ data: Stats }>("/api/dashboard/stats", fetcher, {
     revalidateOnFocus: false,
   });
 
-  const stats = data ?? {
+  const stats = data?.data ?? {
     totalDevices: 0,
     availableDevices: 0,
     assignedDevices: 0,
@@ -59,7 +59,7 @@ export function KpiCards() {
             key={card.key}
             className={`flex flex-col gap-1 rounded-xl border p-4 ${
               isWarning && (stats.warrantyExpiringSoon ?? 0) > 0
-                ? "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30"
+                ? "border-[#C2500F]/30 bg-warning dark:border-[#C2500F]/20 dark:bg-[#C2500F]/10"
                 : ""
             }`}
           >

@@ -46,7 +46,7 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-sm px-4">
       <div className="mb-8 flex flex-col items-center gap-3">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-foreground text-background text-sm font-bold">
+        <div className="flex size-10 items-center justify-center rounded-xl bg-[#F26522] text-white text-sm font-bold italic">
           J
         </div>
         <div className="text-center">

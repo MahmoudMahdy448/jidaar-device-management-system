@@ -446,7 +446,7 @@ Server-side: closes current assignment with closed_reason=TRANSFERRED, opens new
 - Thin 1px hairline borders for separation
 - Generous whitespace, sentence case everywhere
 - Two-column app shell: fixed sidebar (~232px) + fluid main content
-- Light and dark mode via CSS custom properties (HSL tokens)
+- Light and dark mode via CSS custom properties (oklch tokens)
 - Status badges use consistent color mapping:
 
 | Color Family | Meaning |
@@ -457,7 +457,26 @@ Server-side: closes current assignment with closed_reason=TRANSFERRED, opens new
 | Gray | Retired / Neutral |
 | Red | Broken / Lost / Error |
 
-### 6.2 App Shell
+### 6.2 Brand Theme Tokens
+
+The UI is themed to reflect Jidaar's construction/fit-out brand identity. All values below are settled decisions -- do not revert to default shadcn tokens.
+
+| Token | Value | Role |
+|-------|-------|------|
+| Brand accent (orange) | `#F26522` | Primary buttons, active sidebar nav, focus rings, warranty highlight |
+| Sidebar background | `#1E1E1F` | Dark charcoal sidebar; orange reserved for accent role only |
+| Sidebar inactive text | `#A9A8A6` | Muted nav items against charcoal |
+| Page background (light) | `#FAFAF7` | Warm paper, not stark white |
+| Card / surface | `#FFFFFF` / `#E4E3DC` borders | White cards with hairline warm-gray borders |
+| Primary text | `#1E1E1F` | Body text and headings |
+| Secondary text | `#71716C` | Labels, placeholders, secondary info |
+| Warranty warning tint | `#FDECD9` bg / `#C2500F` text | Darker step of brand orange for accessible contrast |
+
+**Font pairing:** IBM Plex Sans (weights 400/500, 700 for wordmark only) for all UI text. IBM Plex Mono (400/500) reserved for technical identifiers: Asset ID, Serial Number, IP Address, MAC Address, Inventory Number, Employee ID. Applied via `next/font/google` with CSS variable pattern.
+
+**Border radius:** Base `--radius` token set to `0.4rem` (~6px) for controls. Cards retain the larger derived radius for visual distinction.
+
+### 6.3 App Shell
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -483,7 +502,7 @@ Server-side: closes current assignment with closed_reason=TRANSFERRED, opens new
 
 Sidebar collapses to icon-only on viewports < 1024px. Main content never scrolls horizontally.
 
-### 6.3 Page Inventory
+### 6.4 Page Inventory
 
 | # | Route | Description |
 |---|-------|-------------|
@@ -506,7 +525,7 @@ Sidebar collapses to icon-only on viewports < 1024px. Main content never scrolls
 | 17 | `/login` | Login page |
 | 18 | `404` | Not found page |
 
-### 6.4 Forms
+### 6.5 Forms
 
 All create/edit forms use a **slide-over panel** (slides in from the right) consistently across the entire app. This avoids full-page navigation for forms and keeps context visible.
 
@@ -515,7 +534,7 @@ All create/edit forms use a **slide-over panel** (slides in from the right) cons
 - Primary "Save" / secondary "Cancel" buttons, sticky at bottom
 - Modal dialogs for: Confirm delete, Confirm return, Confirm transfer, Confirm deactivation
 
-### 6.5 States
+### 6.6 States
 
 Every list and detail view handles four states:
 1. **Loading:** Skeleton rows/cards (Tailwind `animate-pulse`)
@@ -523,7 +542,7 @@ Every list and detail view handles four states:
 3. **Error:** Inline error with retry action
 4. **Populated:** Normal data display
 
-### 6.6 Interactions
+### 6.7 Interactions
 
 - **Toast notifications** for all create/update/delete/assign/return actions (auto-dismiss 4s)
 - **Confirmation dialogs** for all destructive actions (soft-delete, retire, deactivate)

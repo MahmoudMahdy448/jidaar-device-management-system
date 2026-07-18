@@ -95,11 +95,11 @@ function SidebarContent({ collapsed }: { collapsed?: boolean }) {
     <div className="flex h-full flex-col bg-sidebar">
       <div className={cn("flex h-14 items-center border-b border-sidebar-border px-4", collapsed && "justify-center px-0")}>
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex size-7 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold">
+          <div className="flex size-7 items-center justify-center rounded-lg bg-[#F26522] text-white text-xs font-bold">
             J
           </div>
           {!collapsed && (
-            <span className="text-base font-semibold text-sidebar-foreground">
+            <span className="text-base font-bold italic text-sidebar-foreground">
               Jidaar
             </span>
           )}
