@@ -1,0 +1,280 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  TECHNICIAN
+  READ_ONLY
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  TERMINATED
+}
+
+enum AssignmentClosedReason {
+  RETURNED
+  TRANSFERRED
+  LOST
+  RETIRED
+  DEACTIVATED
+}
+
+// ─── Users ───────────────────────────────────────────────
+
+model User {
+  id             String      @id @default(uuid()) @db.Uuid
+  employeeId     String      @unique @map("employee_id") @db.VarChar(50)
+  firstName      String      @map("first_name") @db.VarChar(100)
+  lastName       String      @map("last_name") @db.VarChar(100)
+  email          String      @unique @db.VarChar(255)
+  phone          String?     @db.VarChar(20)
+  departmentId   String?     @map("department_id") @db.Uuid
+  jobTitle       String?     @map("job_title") @db.VarChar(100)
+  officeLocation String?     @map("office_location") @db.VarChar(100)
+  role           UserRole    @default(READ_ONLY)
+  status         UserStatus  @default(ACTIVE)
+  notes          String?     @db.Text
+  avatarUrl      String?     @map("avatar_url") @db.VarChar(500)
+  passwordHash   String      @map("password_hash") @db.VarChar(255)
+
+  department Department? @relation(fields: [departmentId], references: [id])
+
+  myAssignments   Assignment[] @relation("AssignmentUser")
+  assignedByMe    Assignment[] @relation("AssignedByUser")
+  returnedByMe    Assignment[] @relation("ReturnedByUser")
+  activityLogs    ActivityLog[]
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@index([departmentId])
+  @@index([status])
+  @@index([role])
+  @@map("users")
+}
+
+// ─── Devices ─────────────────────────────────────────────
+
+model Device {
+  id                   String    @id @default(uuid()) @db.Uuid
+  assetId              String    @unique @map("asset_id") @db.VarChar(50)
+  name                 String    @db.VarChar(200)
+  deviceTypeId         String    @map("device_type_id") @db.Uuid
+  manufacturerId       String?   @map("manufacturer_id") @db.Uuid
+  model                String?   @db.VarChar(200)
+  serialNumber         String?   @map("serial_number") @db.VarChar(200)
+  inventoryNumber      String?   @map("inventory_number") @db.VarChar(100)
+  hostname             String?   @db.VarChar(200)
+  ipAddress            String?   @map("ip_address") @db.VarChar(45)
+  macAddress           String?   @map("mac_address") @db.VarChar(17)
+  statusId             String    @map("status_id") @db.Uuid
+  departmentId         String?   @map("department_id") @db.Uuid
+  locationId           String?   @map("location_id") @db.Uuid
+  specifications       Json      @default("{}")
+  purchaseDate         DateTime? @map("purchase_date") @db.Date
+  warrantyExpiration   DateTime? @map("warranty_expiration") @db.Date
+  vendorId             String?   @map("vendor_id") @db.Uuid
+  purchasePrice        Decimal?  @map("purchase_price") @db.Decimal(12, 2)
+  notes                String?   @db.Text
+
+  deviceType   DeviceType    @relation(fields: [deviceTypeId], references: [id])
+  manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id])
+  status       DeviceStatus  @relation(fields: [statusId], references: [id])
+  department   Department?   @relation(fields: [departmentId], references: [id])
+  location     Location?     @relation(fields: [locationId], references: [id])
+  vendor       Vendor?       @relation(fields: [vendorId], references: [id])
+
+  assignments  Assignment[]
+  attachments  Attachment[]
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@index([statusId])
+  @@index([deviceTypeId])
+  @@index([departmentId])
+  @@index([manufacturerId])
+  @@index([locationId])
+  @@index([vendorId])
+  @@index([name])
+  @@map("devices")
+}
+
+// ─── Device Types ────────────────────────────────────────
+
+model DeviceType {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique @db.VarChar(100)
+  description String?  @db.Text
+  category    String?  @db.VarChar(100)
+
+  devices Device[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("device_types")
+}
+
+// ─── Device Statuses ─────────────────────────────────────
+
+model DeviceStatus {
+  id        String  @id @default(uuid()) @db.Uuid
+  name      String  @unique @db.VarChar(50)
+  color     String  @db.VarChar(20)
+  sortOrder Int     @default(0) @map("sort_order")
+
+  devices Device[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("device_statuses")
+}
+
+// ─── Departments ─────────────────────────────────────────
+
+model Department {
+  id   String  @id @default(uuid()) @db.Uuid
+  name String  @unique @db.VarChar(100)
+  code String? @unique @db.VarChar(20)
+
+  users   User[]
+  devices Device[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("departments")
+}
+
+// ─── Locations ───────────────────────────────────────────
+
+model Location {
+  id       String  @id @default(uuid()) @db.Uuid
+  name     String  @db.VarChar(200)
+  building String? @db.VarChar(100)
+  floor    String? @db.VarChar(20)
+  room     String? @db.VarChar(50)
+
+  devices Device[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@unique([name, building, floor, room])
+  @@map("locations")
+}
+
+// ─── Manufacturers ───────────────────────────────────────
+
+model Manufacturer {
+  id      String  @id @default(uuid()) @db.Uuid
+  name    String  @unique @db.VarChar(200)
+  website String? @db.VarChar(500)
+
+  devices Device[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("manufacturers")
+}
+
+// ─── Vendors ─────────────────────────────────────────────
+
+model Vendor {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String  @unique @db.VarChar(200)
+  contactName String? @map("contact_name") @db.VarChar(200)
+  email       String? @db.VarChar(255)
+  phone       String? @db.VarChar(20)
+  website     String? @db.VarChar(500)
+
+  devices Device[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("vendors")
+}
+
+// ─── Assignments ─────────────────────────────────────────
+
+model Assignment {
+  id                  String                  @id @default(uuid()) @db.Uuid
+  deviceId            String                  @map("device_id") @db.Uuid
+  userId              String                  @map("user_id") @db.Uuid
+  assignedById        String?                 @map("assigned_by_id") @db.Uuid
+  returnedById        String?                 @map("returned_by_id") @db.Uuid
+  assignmentDate      DateTime                @map("assignment_date") @db.Date
+  expectedReturnDate  DateTime?               @map("expected_return_date") @db.Date
+  returnDate          DateTime?               @map("return_date") @db.Date
+  closedReason        AssignmentClosedReason? @map("closed_reason")
+  conditionBefore     String?                 @map("condition_before") @db.Text
+  conditionAfter      String?                 @map("condition_after") @db.Text
+  notes               String?                 @db.Text
+
+  device     Device @relation(fields: [deviceId], references: [id])
+  user       User   @relation("AssignmentUser", fields: [userId], references: [id])
+  assignedBy User?  @relation("AssignedByUser", fields: [assignedById], references: [id])
+  returnedBy User?  @relation("ReturnedByUser", fields: [returnedById], references: [id])
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@index([deviceId])
+  @@index([userId])
+  @@index([returnDate])
+  @@map("assignments")
+}
+
+// ─── Attachments ─────────────────────────────────────────
+
+model Attachment {
+  id        String   @id @default(uuid()) @db.Uuid
+  deviceId  String   @map("device_id") @db.Uuid
+  filename  String   @db.VarChar(255)
+  mimeType  String?  @map("mime_type") @db.VarChar(100)
+  size      BigInt?  @db.BigInt
+  s3Key     String   @map("s3_key") @db.VarChar(500)
+  s3Bucket  String?  @map("s3_bucket") @db.VarChar(200)
+
+  device Device @relation(fields: [deviceId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([deviceId])
+  @@map("attachments")
+}
+
+// ─── Activity Logs ───────────────────────────────────────
+
+model ActivityLog {
+  id         String  @id @default(uuid()) @db.Uuid
+  entityType String  @map("entity_type") @db.VarChar(50)
+  entityId   String  @map("entity_id") @db.Uuid
+  action     String  @db.VarChar(50)
+  actorId    String? @map("actor_id") @db.Uuid
+  changes    Json?
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
