@@ -112,18 +112,6 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
     onOpenChange(false);
   };
 
-  const handleValueChange = (field: string, value: string) => {
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLInputElement.prototype,
-      "value"
-    )?.set;
-    const input = document.querySelector(`[name="${field}"]`) as HTMLInputElement | null;
-    if (input && nativeInputValueSetter) {
-      nativeInputValueSetter.call(input, value);
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-  };
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex flex-col overflow-y-auto sm:max-w-lg">

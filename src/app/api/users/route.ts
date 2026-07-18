@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { apiSuccess, handleApiError, ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
-import { logActivity, computeChanges } from "@/lib/activity-log";
+import { apiSuccess, handleApiError, ConflictError, ValidationError } from "@/lib/errors";
+import { logActivity } from "@/lib/activity-log";
 
 export const dynamic = "force-dynamic";
 

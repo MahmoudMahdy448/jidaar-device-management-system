@@ -26,14 +26,6 @@ interface DeviceTableProps {
   devices: DeviceWithType[];
 }
 
-function formatCurrency(amount: unknown): string {
-  if (!amount) return "";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "SAR",
-  }).format(Number(amount));
-}
-
 function isWarrantyActive(warrantyExpiration: Date | string | null): boolean {
   if (!warrantyExpiration) return false;
   return new Date(warrantyExpiration) > new Date();

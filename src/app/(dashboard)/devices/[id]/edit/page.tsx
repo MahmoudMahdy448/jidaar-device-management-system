@@ -2,12 +2,12 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeviceForm } from "@/components/devices/device-form";
 import { useDevice } from "@/hooks/use-devices";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 export default function DeviceEditPage({
@@ -18,13 +18,7 @@ export default function DeviceEditPage({
   const { id } = use(params);
   const router = useRouter();
   const { device, isLoading, error } = useDevice(id);
-  const [formOpen, setFormOpen] = useState(false);
-
-  useEffect(() => {
-    if (device && !isLoading) {
-      setFormOpen(true);
-    }
-  }, [device, isLoading]);
+  const [formOpen, setFormOpen] = useState(() => !!device && !isLoading);
 
   const handleSave = async (formData: Record<string, unknown>) => {
     const res = await fetch(`/api/devices/${id}`, {

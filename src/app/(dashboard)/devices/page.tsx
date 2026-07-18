@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { Plus, Loader2, Download } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeviceTable } from "@/components/devices/device-table";
@@ -12,7 +11,6 @@ import { useDevices } from "@/hooks/use-devices";
 import { toast } from "sonner";
 
 export default function DevicesPage() {
-  const router = useRouter();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusId, setStatusId] = useState("");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -50,15 +50,16 @@ export function TransferDialog({
   const [notes, setNotes] = useState("");
   const [userSearch, setUserSearch] = useState("");
 
-  useEffect(() => {
-    if (!open) return;
-    setLoading(true);
-    setError(null);
+  const resetForm = useCallback(() => {
     setSelectedUserId("");
     setTransferDate(todayISO());
     setNotes("");
     setUserSearch("");
+  }, []);
 
+  const fetchUsers = useCallback(() => {
+    setLoading(true);
+    setError(null);
     fetch("/api/users?pageSize=500")
       .then((r) => r.json())
       .then((res) => {
@@ -66,7 +67,18 @@ export function TransferDialog({
       })
       .catch(() => setError("Failed to load users"))
       .finally(() => setLoading(false));
-  }, [open]);
+  }, []);
+
+  const handleOpenChange = useCallback(
+    (newOpen: boolean) => {
+      if (newOpen) {
+        resetForm();
+        fetchUsers();
+      }
+      onOpenChange(newOpen);
+    },
+    [onOpenChange, resetForm, fetchUsers],
+  );
 
   const filteredUsers = users.filter((u) => {
     const query = userSearch.toLowerCase();
@@ -116,7 +128,7 @@ export function TransferDialog({
   }, [assignmentId, selectedUserId, transferDate, notes, onSuccess, onOpenChange]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Transfer Device</DialogTitle>

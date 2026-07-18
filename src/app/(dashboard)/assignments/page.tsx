@@ -1,20 +1,10 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { Plus, Loader2, AlertTriangle, Download } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { AssignmentTable } from "@/components/assignments/assignment-table";
 import { AssignDialog } from "@/components/assignments/assign-dialog";
 import { ReturnDialog } from "@/components/assignments/return-dialog";
@@ -25,7 +15,6 @@ import { toast } from "sonner";
 type TabValue = "all" | "active" | "returned" | "overdue";
 
 export default function AssignmentsPage() {
-  const router = useRouter();
   const [tab, setTab] = useState<TabValue>("all");
   const [page, setPage] = useState(1);
   const [assignOpen, setAssignOpen] = useState(false);

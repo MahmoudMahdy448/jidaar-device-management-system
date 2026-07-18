@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -53,10 +53,7 @@ export function AssignDialog({ open, onOpenChange, onSuccess }: AssignDialogProp
   const [deviceSearch, setDeviceSearch] = useState("");
   const [userSearch, setUserSearch] = useState("");
 
-  useEffect(() => {
-    if (!open) return;
-    setLoading(true);
-    setError(null);
+  const resetForm = useCallback(() => {
     setSelectedDeviceId("");
     setSelectedUserId("");
     setAssignmentDate(todayISO());
@@ -64,7 +61,11 @@ export function AssignDialog({ open, onOpenChange, onSuccess }: AssignDialogProp
     setNotes("");
     setDeviceSearch("");
     setUserSearch("");
+  }, []);
 
+  const fetchFormData = useCallback(() => {
+    setLoading(true);
+    setError(null);
     Promise.all([
       fetch("/api/devices?pageSize=500").then((r) => r.json()),
       fetch("/api/users?pageSize=500").then((r) => r.json()),
@@ -78,7 +79,18 @@ export function AssignDialog({ open, onOpenChange, onSuccess }: AssignDialogProp
       })
       .catch(() => setError("Failed to load devices or users"))
       .finally(() => setLoading(false));
-  }, [open]);
+  }, []);
+
+  const handleOpenChange = useCallback(
+    (newOpen: boolean) => {
+      if (newOpen) {
+        resetForm();
+        fetchFormData();
+      }
+      onOpenChange(newOpen);
+    },
+    [onOpenChange, resetForm, fetchFormData],
+  );
 
   const filteredDevices = devices.filter((d) => {
     const query = deviceSearch.toLowerCase();
@@ -146,7 +158,7 @@ export function AssignDialog({ open, onOpenChange, onSuccess }: AssignDialogProp
   ]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Assign Device</DialogTitle>

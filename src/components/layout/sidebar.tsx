@@ -12,7 +12,6 @@ import {
   MapPin,
   Factory,
   ShoppingCart,
-  Settings,
   LogOut,
   Menu,
   Tags,
