@@ -1,3 +1,25 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import { KpiCards } from "@/components/dashboard/kpi-cards";
+import { RecentActivity } from "@/components/dashboard/recent-activity";
+
+const DevicesByTypeChart = dynamic(
+  () =>
+    import("@/components/dashboard/devices-by-type-chart").then(
+      (m) => m.DevicesByTypeChart
+    ),
+  { ssr: false }
+);
+
+const DevicesByStatusChart = dynamic(
+  () =>
+    import("@/components/dashboard/devices-by-status-chart").then(
+      (m) => m.DevicesByStatusChart
+    ),
+  { ssr: false }
+);
+
 export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
@@ -8,30 +30,14 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: "Total devices", value: "—" },
-          { label: "Active assignments", value: "—" },
-          { label: "Departments", value: "—" },
-          { label: "Users", value: "—" },
-        ].map((card) => (
-          <div
-            key={card.label}
-            className="flex flex-col gap-1 rounded-xl border p-4"
-          >
-            <span className="text-sm text-muted-foreground">{card.label}</span>
-            <span className="text-2xl font-semibold text-foreground">
-              {card.value}
-            </span>
-          </div>
-        ))}
+      <KpiCards />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DevicesByTypeChart />
+        <DevicesByStatusChart />
       </div>
 
-      <div className="rounded-xl border p-8 text-center">
-        <p className="text-sm text-muted-foreground">
-          Dashboard charts and activity feed will be implemented in Phase 7.
-        </p>
-      </div>
+      <RecentActivity />
     </div>
   );
 }

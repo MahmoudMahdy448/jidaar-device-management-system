@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeviceTable } from "@/components/devices/device-table";
@@ -85,10 +85,28 @@ export default function DevicesPage() {
             Manage devices in the system.
           </p>
         </div>
-        <Button size="sm" onClick={() => setFormOpen(true)}>
-          <Plus className="size-4" />
-          Add Device
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const params = new URLSearchParams();
+              if (search) params.set("search", search);
+              if (statusId && statusId !== "all") params.set("statusId", statusId);
+              if (deviceTypeId && deviceTypeId !== "all") params.set("deviceTypeId", deviceTypeId);
+              if (departmentId && departmentId !== "all") params.set("departmentId", departmentId);
+              const qs = params.toString();
+              window.open(`/api/export/devices${qs ? `?${qs}` : ""}`, "_blank");
+            }}
+          >
+            <Download className="size-4" />
+            Export
+          </Button>
+          <Button size="sm" onClick={() => setFormOpen(true)}>
+            <Plus className="size-4" />
+            Add Device
+          </Button>
+        </div>
       </div>
 
       <DeviceFilters

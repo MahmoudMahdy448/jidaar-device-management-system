@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Loader2, AlertTriangle } from "lucide-react";
+import { Plus, Loader2, AlertTriangle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -67,10 +67,26 @@ export default function AssignmentsPage() {
             Manage device assignments and transfers.
           </p>
         </div>
-        <Button size="sm" onClick={() => setAssignOpen(true)}>
-          <Plus className="size-4" />
-          Assign Device
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const params = new URLSearchParams();
+              if (tab === "active") params.set("status", "open");
+              if (tab === "returned") params.set("status", "closed");
+              const qs = params.toString();
+              window.open(`/api/export/assignments${qs ? `?${qs}` : ""}`, "_blank");
+            }}
+          >
+            <Download className="size-4" />
+            Export
+          </Button>
+          <Button size="sm" onClick={() => setAssignOpen(true)}>
+            <Plus className="size-4" />
+            Assign Device
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="all" onValueChange={handleTabChange}>
