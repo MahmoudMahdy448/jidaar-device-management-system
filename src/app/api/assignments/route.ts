@@ -7,6 +7,7 @@ import {
 } from "@/lib/errors";
 import { AssignmentSchema } from "@/lib/validations";
 import { logActivity } from "@/lib/activity-log";
+import { requirePermission } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    await requirePermission("assignments:write");
     const body = await request.json();
     const parsed = AssignmentSchema.safeParse(body);
 
@@ -105,13 +107,26 @@ export async function POST(request: Request) {
       parsed.data;
 
     const result = await prisma.$transaction(async (tx) => {
-      const device = await tx.device.findUnique({
-        where: { id: deviceId },
-        include: { status: true },
+      const device = await tx.$queryRawUnsafe<{ id: string; statusId: string }[]>(
+        'SELECT "id", "status_id" AS "statusId" FROM "devices" WHERE "id" = $1 AND "deleted_at" IS NULL FOR UPDATE',
+        deviceId
+      );
+
+      if (!device || device.length === 0) {
+        throw new ConflictError("Device not found");
+      }
+
+      const user = await tx.user.findFirst({
+        where: { id: userId, deletedAt: null },
+        select: { id: true, status: true },
       });
 
-      if (!device || device.deletedAt) {
-        throw new ConflictError("Device not found");
+      if (!user) {
+        throw new ConflictError("User not found");
+      }
+
+      if (user.status === "TERMINATED") {
+        throw new ConflictError("Cannot assign device to a terminated user");
       }
 
       const openAssignment = await tx.assignment.findFirst({
@@ -189,6 +204,18 @@ export async function POST(request: Request) {
 
     return apiSuccess(assignment);
   } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
+      return handleApiError(
+        new ConflictError(
+          "This device already has an active assignment. Return or transfer it before assigning to a new user."
+        )
+      );
+    }
     return handleApiError(error);
   }
 }

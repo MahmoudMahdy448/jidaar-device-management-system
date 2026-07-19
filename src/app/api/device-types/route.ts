@@ -1,5 +1,6 @@
 import { apiSuccess, handleApiError, ConflictError } from "@/lib/errors";
 import { DeviceTypeSchema } from "@/lib/validations";
+import { requirePermission } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    await requirePermission("device-types:write");
     const { prisma } = await import("@/lib/prisma");
     const body = await request.json();
     const parsed = DeviceTypeSchema.safeParse(body);

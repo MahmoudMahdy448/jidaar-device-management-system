@@ -200,6 +200,23 @@
 
 ---
 
+## Phase 13 — Code Audit & Security Hardening
+
+- [x] P1.1: Add `requirePermission()` to all mutating route handlers — done: `src/lib/auth-helpers.ts` created, all 30 POST/PUT/DELETE handlers updated
+- [x] P1.2: Add partial unique index migration for assignments — done: `prisma/migrations/20260719000000_add_assignment_partial_unique_index/migration.sql` + P2002 catch in assignments route
+- [x] P1.3: Add login rate limiting — done: `src/lib/rate-limit.ts` in-memory limiter (5 attempts/15 min/email), integrated into `src/lib/auth.ts`
+- [x] P1.4: Middleware returns JSON 401 for API routes — done: no more HTML redirect for unauthenticated API calls
+- [x] P2.1: Server-side search for assign/transfer dialogs — done: debounced server-side search via `useDebounce` hook, AbortController cleanup, `pageSize=25`
+- [x] P2.2: Document connection pooling — done: ARCHITECTURE.md §14, README.md deployment section
+- [x] P2.3: Wire up Sentry error monitoring — done: `@sentry/nextjs` installed, `sentry.client.config.ts` + `sentry.server.config.ts` + `src/instrumentation.ts`, `next.config.ts` wrapped with `withSentryConfig`, `handleApiError()` captures unhandled 500s in production
+- [x] P3.1: Auto-suggest Asset ID — done: `src/app/api/devices/next-asset-id/route.ts` (sequential AST-0001 pattern), pre-filled in device form
+- [x] P3.2: Dynamic device-type-specific fields — done: `src/lib/spec-fields.ts` field definitions per category, dynamic specification section in device form
+- [x] P3.3: Set `mode: "onBlur"` on reference-form — done
+
+**Acceptance for this phase:** All P1 security fixes enforced, P2 reliability improvements deployed, P3 UX enhancements shipped. Lint passes clean.
+
+---
+
 ## Completion Notes
 
 - **Completed:** July 18, 2026
@@ -215,6 +232,6 @@
 
 ## Next Task
 
-Re-theme complete. Awaiting next feature request.
+Phase 13 complete. Security hardening, reliability, and UX improvements shipped.
 
-- Potential follow-ups: add Jidaar logo SVG to sidebar header (replacing the "J" monogram), implement data-driven device-type specification fields, add dark mode brand-specific chart colors, or begin E2E test coverage expansion.
+- Remaining follow-ups: E2E test coverage expansion, dark mode brand-specific chart colors, Jidaar logo SVG in sidebar header.

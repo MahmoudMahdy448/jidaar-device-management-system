@@ -8,11 +8,13 @@ import {
 } from "@/lib/errors";
 import { TransferAssignmentSchema } from "@/lib/validations";
 import { logActivity } from "@/lib/activity-log";
+import { requirePermission } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
+    await requirePermission("assignments:write");
     const body = await request.json();
     const parsed = TransferAssignmentSchema.safeParse(body);
 

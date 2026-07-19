@@ -149,12 +149,14 @@ Build the Docker image for production:
 docker-compose -f docker-compose.yml up --build -d
 ```
 
-For cloud deployment, ensure the following environment variables are set:
+For cloud deployment (e.g., Supabase), ensure the following environment variables are set:
 
-- `DATABASE_URL` — PostgreSQL connection string
+- `DATABASE_URL` — PostgreSQL connection string (use pooler endpoint port 6543 for production; port 5432 for migrations only)
 - `NEXTAUTH_SECRET` — Random secret for NextAuth session encryption
 - `NEXTAUTH_URL` — Your production URL
 - `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` — S3 storage configuration
+
+See `ARCHITECTURE.md` §14 for connection pooling details.
 
 ## License
 

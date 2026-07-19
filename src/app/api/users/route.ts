@@ -1,27 +1,13 @@
-import { z } from "zod";
+import { prisma } from "@/lib/prisma";
 import { apiSuccess, handleApiError, ConflictError, ValidationError } from "@/lib/errors";
+import { CreateUserSchema } from "@/lib/validations";
 import { logActivity } from "@/lib/activity-log";
+import { requirePermission } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
 
-const CreateUserSchema = z.object({
-  firstName: z.string().min(1, "First name is required").max(100),
-  lastName: z.string().min(1, "Last name is required").max(100),
-  email: z.string().min(1, "Email is required").max(255).email("Invalid email format"),
-  phone: z.string().max(20).optional().nullable(),
-  employeeId: z.string().min(1, "Employee ID is required").max(50),
-  departmentId: z.string().uuid().optional().nullable(),
-  jobTitle: z.string().max(100).optional().nullable(),
-  officeLocation: z.string().max(100).optional().nullable(),
-  role: z.enum(["ADMIN", "TECHNICIAN", "READ_ONLY"]).default("READ_ONLY"),
-  status: z.enum(["ACTIVE", "INACTIVE", "TERMINATED"]).default("ACTIVE"),
-  notes: z.string().optional().nullable(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
-
 export async function GET(request: Request) {
   try {
-    const { prisma } = await import("@/lib/prisma");
     const { searchParams } = new URL(request.url);
 
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
@@ -92,7 +78,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { prisma } = await import("@/lib/prisma");
+    await requirePermission("users:write");
     const { hash } = await import("bcryptjs");
     const body = await request.json();
     const parsed = CreateUserSchema.safeParse(body);
@@ -108,41 +94,43 @@ export async function POST(request: Request) {
 
     const { password, ...userData } = parsed.data;
 
-    const existing = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: userData.email },
-          { employeeId: userData.employeeId },
-        ],
-      },
-    });
+    const user = await prisma.$transaction(async (tx) => {
+      const existing = await tx.user.findFirst({
+        where: {
+          OR: [
+            { email: userData.email },
+            { employeeId: userData.employeeId },
+          ],
+        },
+      });
 
-    if (existing) {
-      const field = existing.email === userData.email ? "email" : "employeeId";
-      throw new ConflictError(`A user with this ${field} already exists`);
-    }
+      if (existing) {
+        const field = existing.email === userData.email ? "email" : "employeeId";
+        throw new ConflictError(`A user with this ${field} already exists`);
+      }
 
-    const passwordHash = await hash(password, 12);
+      const passwordHash = await hash(password, 12);
 
-    const user = await prisma.user.create({
-      data: {
-        ...userData,
-        passwordHash,
-      },
-      select: {
-        id: true,
-        employeeId: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        phone: true,
-        departmentId: true,
-        jobTitle: true,
-        officeLocation: true,
-        role: true,
-        status: true,
-        createdAt: true,
-      },
+      return tx.user.create({
+        data: {
+          ...userData,
+          passwordHash,
+        },
+        select: {
+          id: true,
+          employeeId: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          departmentId: true,
+          jobTitle: true,
+          officeLocation: true,
+          role: true,
+          status: true,
+          createdAt: true,
+        },
+      });
     });
 
     await logActivity({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useDebounce } from "@/hooks/use-debounce";
 
 interface User {
   id: string;
@@ -50,44 +51,59 @@ export function TransferDialog({
   const [notes, setNotes] = useState("");
   const [userSearch, setUserSearch] = useState("");
 
+  const debouncedUserSearch = useDebounce(userSearch, 300);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const resetForm = useCallback(() => {
     setSelectedUserId("");
     setTransferDate(todayISO());
     setNotes("");
     setUserSearch("");
+    setUsers([]);
   }, []);
 
-  const fetchUsers = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    fetch("/api/users?pageSize=500")
-      .then((r) => r.json())
-      .then((res) => {
-        setUsers(res.data ?? []);
-      })
-      .catch(() => setError("Failed to load users"))
-      .finally(() => setLoading(false));
-  }, []);
+  useEffect(() => {
+    if (!open) return;
+
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const load = async () => {
+      try {
+        const params = new URLSearchParams({ pageSize: "25" });
+        if (debouncedUserSearch) params.set("search", debouncedUserSearch);
+
+        const res = await fetch(`/api/users?${params}`, { signal: controller.signal });
+        const json = await res.json();
+        if (!controller.signal.aborted) setUsers(json.data ?? []);
+      } catch {
+        if (!controller.signal.aborted) {
+          setUsers([]);
+          setError("Failed to load users");
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    };
+
+    load();
+    return () => controller.abort();
+  }, [open, debouncedUserSearch]);
 
   const handleOpenChange = useCallback(
     (newOpen: boolean) => {
       if (newOpen) {
         resetForm();
-        fetchUsers();
+        setLoading(true);
+        setError(null);
+      } else {
+        abortControllerRef.current?.abort();
       }
       onOpenChange(newOpen);
     },
-    [onOpenChange, resetForm, fetchUsers],
+    [onOpenChange, resetForm],
   );
-
-  const filteredUsers = users.filter((u) => {
-    const query = userSearch.toLowerCase();
-    return (
-      u.firstName.toLowerCase().includes(query) ||
-      u.lastName.toLowerCase().includes(query) ||
-      u.email.toLowerCase().includes(query)
-    );
-  });
 
   const selectedUser = users.find((u) => u.id === selectedUserId);
 
@@ -137,86 +153,84 @@ export function TransferDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <p className="text-sm text-muted-foreground">Loading users...</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label>New User *</Label>
-              {selectedUser ? (
-                <div className="flex items-center justify-between rounded-lg border px-3 py-2">
-                  <span className="text-sm">
-                    {selectedUser.firstName} {selectedUser.lastName}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedUserId("")}
-                  >
-                    Change
-                  </Button>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label>New User *</Label>
+            {selectedUser ? (
+              <div className="flex items-center justify-between rounded-lg border px-3 py-2">
+                <span className="text-sm">
+                  {selectedUser.firstName} {selectedUser.lastName}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedUserId("")}
+                >
+                  Change
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Input
+                  placeholder="Search users..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                />
+                <div className="max-h-40 overflow-y-auto rounded-lg border">
+                  {loading ? (
+                    <p className="px-3 py-2 text-sm text-muted-foreground">
+                      Loading...
+                    </p>
+                  ) : users.length === 0 ? (
+                    <p className="px-3 py-2 text-sm text-muted-foreground">
+                      No users found.
+                    </p>
+                  ) : (
+                    users.map((user) => (
+                      <button
+                        key={user.id}
+                        type="button"
+                        className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent"
+                        onClick={() => setSelectedUserId(user.id)}
+                      >
+                        <span>
+                          {user.firstName} {user.lastName}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {user.email}
+                        </span>
+                      </button>
+                    ))
+                  )}
                 </div>
-              ) : (
-                <>
-                  <Input
-                    placeholder="Search users..."
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                  />
-                  <div className="max-h-40 overflow-y-auto rounded-lg border">
-                    {filteredUsers.length === 0 ? (
-                      <p className="px-3 py-2 text-sm text-muted-foreground">
-                        No users found.
-                      </p>
-                    ) : (
-                      filteredUsers.map((user) => (
-                        <button
-                          key={user.id}
-                          type="button"
-                          className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent"
-                          onClick={() => setSelectedUserId(user.id)}
-                        >
-                          <span>
-                            {user.firstName} {user.lastName}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {user.email}
-                          </span>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="transferDate">Transfer Date *</Label>
-              <Input
-                id="transferDate"
-                type="date"
-                value={transferDate}
-                onChange={(e) => setTransferDate(e.target.value)}
-              />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="transferNotes">Notes</Label>
-              <Textarea
-                id="transferNotes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional notes"
-              />
-            </div>
-
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
+              </>
             )}
           </div>
-        )}
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="transferDate">Transfer Date *</Label>
+            <Input
+              id="transferDate"
+              type="date"
+              value={transferDate}
+              onChange={(e) => setTransferDate(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="transferNotes">Notes</Label>
+            <Textarea
+              id="transferNotes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Optional notes"
+            />
+          </div>
+
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+        </div>
 
         <DialogFooter>
           <Button

@@ -1,12 +1,13 @@
-import { apiSuccess, handleApiError, ConflictError } from "@/lib/errors";
+import { prisma } from "@/lib/prisma";
+import { apiSuccess, handleApiError, ValidationError, ConflictError } from "@/lib/errors";
 import { DeviceSchema } from "@/lib/validations";
 import { logActivity } from "@/lib/activity-log";
+import { requirePermission } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    const { prisma } = await import("@/lib/prisma");
     const { searchParams } = new URL(request.url);
 
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
@@ -27,9 +28,11 @@ export async function GET(request: Request) {
       where.OR = [
         { name: { contains: search, mode: "insensitive" } },
         { assetId: { contains: search, mode: "insensitive" } },
+        { model: { contains: search, mode: "insensitive" } },
         { serialNumber: { contains: search, mode: "insensitive" } },
         { ipAddress: { contains: search, mode: "insensitive" } },
         { macAddress: { contains: search, mode: "insensitive" } },
+        { manufacturer: { name: { contains: search, mode: "insensitive" } } },
       ];
     }
 
@@ -79,7 +82,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { prisma } = await import("@/lib/prisma");
+    await requirePermission("devices:write");
     const body = await request.json();
     const parsed = DeviceSchema.safeParse(body);
 
@@ -89,25 +92,25 @@ export async function POST(request: Request) {
         const field = issue.path.join(".");
         details[field] = issue.message;
       });
-      throw new ConflictError("Validation failed", details);
+      throw new ValidationError("Validation failed", details);
     }
 
-    const existing = await prisma.device.findFirst({
-      where: {
-        OR: [
-          { assetId: parsed.data.assetId },
-          ...(parsed.data.serialNumber ? [{ serialNumber: parsed.data.serialNumber }] : []),
-        ],
-      },
-    });
+    const device = await prisma.$transaction(async (tx) => {
+      const existing = await tx.device.findFirst({
+        where: {
+          OR: [
+            { assetId: parsed.data.assetId },
+            ...(parsed.data.serialNumber ? [{ serialNumber: parsed.data.serialNumber }] : []),
+          ],
+        },
+      });
 
-    if (existing) {
-      const field = existing.assetId === parsed.data.assetId ? "assetId" : "serialNumber";
-      throw new ConflictError(`A device with this ${field} already exists`);
-    }
+      if (existing) {
+        const field = existing.assetId === parsed.data.assetId ? "assetId" : "serialNumber";
+        throw new ConflictError(`A device with this ${field} already exists`);
+      }
 
-    const device = await prisma.device.create({
-      data: parsed.data,
+      return tx.device.create({ data: parsed.data });
     });
 
     await logActivity({

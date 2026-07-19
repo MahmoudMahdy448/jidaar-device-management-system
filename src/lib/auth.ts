@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from "@/lib/rate-limit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -14,14 +15,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
+        const email = (credentials.email as string).toLowerCase().trim();
+
+        const rateLimit = checkLoginRateLimit(email);
+        if (!rateLimit.allowed) {
+          return null;
+        }
+
         const { prisma } = await import("@/lib/prisma");
         const bcrypt = await import("bcryptjs");
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { email },
         });
 
         if (!user || user.status !== "ACTIVE") {
+          recordFailedLogin(email);
           return null;
         }
 
@@ -31,8 +40,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
 
         if (!isValid) {
+          recordFailedLogin(email);
           return null;
         }
+
+        resetLoginRateLimit(email);
 
         return {
           id: user.id,

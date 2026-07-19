@@ -1,6 +1,6 @@
 import { UserRole } from "@prisma/client";
 
-type Permission =
+export type Permission =
   | "devices:read"
   | "devices:write"
   | "devices:delete"
@@ -29,6 +29,7 @@ type Permission =
   | "device-statuses:delete"
   | "dashboard:read"
   | "export:read"
+  | "search:read"
   | "settings:write";
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
@@ -44,6 +45,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "device-statuses:read", "device-statuses:write", "device-statuses:delete",
     "dashboard:read",
     "export:read",
+    "search:read",
     "settings:write",
   ],
   TECHNICIAN: [
@@ -58,6 +60,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "device-statuses:read",
     "dashboard:read",
     "export:read",
+    "search:read",
   ],
   READ_ONLY: [
     "devices:read",
@@ -71,6 +74,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "device-statuses:read",
     "dashboard:read",
     "export:read",
+    "search:read",
   ],
 };
 

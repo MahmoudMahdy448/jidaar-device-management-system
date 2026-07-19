@@ -87,3 +87,36 @@
 
 8. **Status badge colors preserved unchanged**
    - **Why:** Status colors (Available=green, Assigned=blue, etc.) are semantic and pre-date the brand pass. Recoloring them to match the brand orange would break the established visual language.
+
+---
+
+## Session 3 — Code Audit, Security & Reliability
+
+**Date:** 2026-07-19
+**Phase:** Phase 13 (Code Audit & Security Hardening)
+
+### Decisions Made
+
+1. **Defense-in-depth RBAC: middleware + route handler**
+   - **Why:** Middleware enforces RBAC globally, but a bug or misconfigured route could bypass it. `requirePermission()` in route handlers is a second enforcement layer. Cost is one extra DB call per request (session lookup).
+   - **Rejected:** Single enforcement point in middleware only (violates defense-in-depth principle).
+
+2. **In-memory login rate limiter** (not Redis-backed)
+   - **Why:** For 2–5 admin users, in-memory is sufficient. Resets on server restart (acceptable). No Redis dependency to manage.
+   - **Rejected:** Redis-backed rate limiter (operational overhead not justified at this scale). Database-backed (adds latency to auth path).
+
+3. **Partial unique index for concurrent assignment guard** (database-level, not just application)
+   - **Why:** Application-level locks can be bypassed by direct DB access or race conditions. A partial unique index on `assignments(device_id) WHERE return_date IS NULL AND deleted_at IS NULL` is the single source of truth. Prisma's P2002 error code is caught and translated to a user-friendly 409.
+   - **Rejected:** Application-only `SELECT ... FOR UPDATE` (not sufficient under all concurrency scenarios).
+
+4. **Sentry for error monitoring** (not custom logging solution)
+   - **Why:** Sentry provides structured error tracking with context, stack traces, and alerting out of the box. Free tier sufficient for this scale. No need to build custom log aggregation.
+   - **Rejected:** Custom console.error + log file (no alerting, no grouping, no context).
+
+5. **Server-side search with debounce** (not load-all-then-filter)
+   - **Why:** The `pageSize=500` pattern broke when devices exceeded 100. Server-side search scales to any dataset size. 300ms debounce prevents excessive API calls while typing.
+   - **Rejected:** Load-all-then-filter (doesn't scale, breaks with API page size limits).
+
+6. **PrismaPg adapter with Supabase connection pooler** (transaction mode on port 6543)
+   - **Why:** Supabase's managed PgBouncer handles connection pooling. Direct connection (port 5432) reserved for migrations only.
+   - **Rejected:** Direct connection in production (exhausts Supabase connection limits at scale).

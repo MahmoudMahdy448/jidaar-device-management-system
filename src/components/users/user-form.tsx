@@ -21,37 +21,8 @@ import {
 } from "@/components/ui/select";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { CreateUserSchema, EditUserSchema } from "@/lib/validations";
 import { useReferenceData } from "@/hooks/use-reference-data";
-
-const CreateUserSchema = z.object({
-  firstName: z.string().min(1, "First name is required").max(100),
-  lastName: z.string().min(1, "Last name is required").max(100),
-  email: z.string().email("Invalid email format").max(255),
-  phone: z.string().max(20).optional().nullable(),
-  employeeId: z.string().min(1, "Employee ID is required").max(50),
-  departmentId: z.string().uuid().optional().nullable(),
-  jobTitle: z.string().max(100).optional().nullable(),
-  officeLocation: z.string().max(100).optional().nullable(),
-  role: z.enum(["ADMIN", "TECHNICIAN", "READ_ONLY"]).default("READ_ONLY"),
-  status: z.enum(["ACTIVE", "INACTIVE", "TERMINATED"]).default("ACTIVE"),
-  notes: z.string().optional().nullable(),
-  password: z.string().min(8, "Password must be at least 8 characters").optional(),
-});
-
-const EditUserSchema = z.object({
-  firstName: z.string().min(1, "First name is required").max(100),
-  lastName: z.string().min(1, "Last name is required").max(100),
-  email: z.string().email("Invalid email format").max(255),
-  phone: z.string().max(20).optional().nullable(),
-  employeeId: z.string().min(1, "Employee ID is required").max(50),
-  departmentId: z.string().uuid().optional().nullable(),
-  jobTitle: z.string().max(100).optional().nullable(),
-  officeLocation: z.string().max(100).optional().nullable(),
-  role: z.enum(["ADMIN", "TECHNICIAN", "READ_ONLY"]),
-  status: z.enum(["ACTIVE", "INACTIVE", "TERMINATED"]),
-  notes: z.string().optional().nullable(),
-});
 
 interface UserFormProps {
   open: boolean;
@@ -60,12 +31,9 @@ interface UserFormProps {
   onSave: (data: Record<string, unknown>) => Promise<void>;
 }
 
-function getErrorMessage(
-  errors: Record<string, unknown>,
-  field: string
-): string | undefined {
-  const error = errors[field] as { message?: string } | undefined;
-  return error?.message;
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="text-xs text-destructive">{message}</p>;
 }
 
 export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
@@ -81,6 +49,7 @@ export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(isEditing ? EditUserSchema : CreateUserSchema),
+    mode: "onBlur",
   });
 
   useEffect(() => {
@@ -90,28 +59,28 @@ export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
           firstName: (user.firstName as string) ?? "",
           lastName: (user.lastName as string) ?? "",
           email: (user.email as string) ?? "",
-          phone: (user.phone as string) ?? "",
+          phone: (user.phone as string) || null,
           employeeId: (user.employeeId as string) ?? "",
-          departmentId: (user.departmentId as string) ?? "",
-          jobTitle: (user.jobTitle as string) ?? "",
-          officeLocation: (user.officeLocation as string) ?? "",
+          departmentId: (user.departmentId as string) || null,
+          jobTitle: (user.jobTitle as string) || null,
+          officeLocation: (user.officeLocation as string) || null,
           role: (user.role as "ADMIN" | "TECHNICIAN" | "READ_ONLY") ?? "READ_ONLY",
           status: (user.status as "ACTIVE" | "INACTIVE" | "TERMINATED") ?? "ACTIVE",
-          notes: (user.notes as string) ?? "",
+          notes: (user.notes as string) || null,
         });
       } else {
         reset({
           firstName: "",
           lastName: "",
           email: "",
-          phone: "",
+          phone: null,
           employeeId: "",
-          departmentId: "",
-          jobTitle: "",
-          officeLocation: "",
+          departmentId: null,
+          jobTitle: null,
+          officeLocation: null,
           role: "READ_ONLY" as const,
           status: "ACTIVE" as const,
-          notes: "",
+          notes: null,
           password: "",
         });
       }
@@ -119,8 +88,23 @@ export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
   }, [open, user, reset]);
 
   const onSubmit = async (data: Record<string, unknown>) => {
-    await onSave(data);
-    onOpenChange(false);
+    const cleaned = { ...data };
+    const nullableFields = ["phone", "departmentId", "jobTitle", "officeLocation", "notes"];
+    for (const f of nullableFields) {
+      if (cleaned[f] === "" || cleaned[f] === undefined) cleaned[f] = null;
+    }
+    if (!isEditing && !cleaned.password) {
+      return;
+    }
+    if (isEditing) {
+      delete cleaned.password;
+    }
+    try {
+      await onSave(cleaned);
+      onOpenChange(false);
+    } catch {
+      // Error handled by parent — sheet stays open so user can retry
+    }
   };
 
   return (
@@ -149,37 +133,26 @@ export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
             <div className="flex flex-col gap-2">
               <Label htmlFor="firstName">First Name *</Label>
               <Input id="firstName" {...register("firstName")} placeholder="First name" />
-              {getErrorMessage(errors, "firstName") && (
-                <p className="text-xs text-destructive">
-                  {getErrorMessage(errors, "firstName")}
-                </p>
-              )}
+              <FieldError message={errors.firstName?.message} />
             </div>
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="lastName">Last Name *</Label>
               <Input id="lastName" {...register("lastName")} placeholder="Last name" />
-              {getErrorMessage(errors, "lastName") && (
-                <p className="text-xs text-destructive">
-                  {getErrorMessage(errors, "lastName")}
-                </p>
-              )}
+              <FieldError message={errors.lastName?.message} />
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="email">Email *</Label>
             <Input id="email" type="email" {...register("email")} placeholder="user@example.com" />
-            {getErrorMessage(errors, "email") && (
-              <p className="text-xs text-destructive">
-                {getErrorMessage(errors, "email")}
-              </p>
-            )}
+            <FieldError message={errors.email?.message} />
           </div>
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="phone">Phone</Label>
             <Input id="phone" {...register("phone")} placeholder="+966 5X XXX XXXX" />
+            <FieldError message={errors.phone?.message} />
           </div>
 
           <div className="flex flex-col gap-1.5 pt-2">
@@ -192,11 +165,7 @@ export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
             <div className="flex flex-col gap-2">
               <Label htmlFor="employeeId">Employee ID *</Label>
               <Input id="employeeId" {...register("employeeId")} placeholder="e.g. EMP-001" />
-              {getErrorMessage(errors, "employeeId") && (
-                <p className="text-xs text-destructive">
-                  {getErrorMessage(errors, "employeeId")}
-                </p>
-              )}
+              <FieldError message={errors.employeeId?.message} />
             </div>
 
             <div className="flex flex-col gap-2">
@@ -229,11 +198,13 @@ export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
             <div className="flex flex-col gap-2">
               <Label htmlFor="jobTitle">Job Title</Label>
               <Input id="jobTitle" {...register("jobTitle")} placeholder="e.g. IT Specialist" />
+              <FieldError message={errors.jobTitle?.message} />
             </div>
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="officeLocation">Office Location</Label>
               <Input id="officeLocation" {...register("officeLocation")} placeholder="e.g. Building A" />
+              <FieldError message={errors.officeLocation?.message} />
             </div>
           </div>
 
@@ -300,17 +271,14 @@ export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
                 {...register("password")}
                 placeholder="Min. 8 characters"
               />
-              {getErrorMessage(errors, "password") && (
-                <p className="text-xs text-destructive">
-                  {getErrorMessage(errors, "password")}
-                </p>
-              )}
+              <FieldError message={(errors as Record<string, { message?: string }>).password?.message} />
             </div>
           )}
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="notes">Notes</Label>
             <Textarea id="notes" {...register("notes")} placeholder="Additional notes" />
+            <FieldError message={errors.notes?.message} />
           </div>
 
           <div className="mt-auto flex flex-col gap-2 border-t pt-4">

@@ -744,19 +744,37 @@ jidaar-device-management-system/
 - Session strategy: JWT (stateless, no session table needed for 2–5 users).
 - Password hashing: bcrypt with salt rounds = 12.
 - Session contains: `userId`, `role`, `email`.
-- Rate limiting on login endpoint: 5 attempts per minute per IP.
+- Rate limiting on login: in-memory, 5 attempts per 15 minutes per email, resets on successful login.
 
 ### 8.2 Authorization
 
-- Every API route checks `getSession()` → extracts role → checks permission.
-- Permission helper: `requireRole(role: UserRole[])` — returns 401 if no session, 403 if wrong role.
-- UI components use a `usePermissions()` hook to conditionally render write actions.
+**Defense-in-depth: two enforcement layers.**
+
+1. **Middleware** — checks session validity and role permission on every `/api/*` route. Returns JSON `{ data: null, error: { code: "UNAUTHORIZED", message: "..." } }` with 401 for unauthenticated API requests (no HTML redirect).
+
+2. **Route handler** — `requirePermission(permission)` in each mutating handler (POST/PUT/DELETE). Catches middleware bypasses (e.g., misconfigured route).
+
+```typescript
+// src/lib/auth-helpers.ts
+export async function requirePermission(permission: Permission) {
+  const session = await getSession();
+  if (!session) throw new UnauthorizedError();
+  if (!hasPermission(session.user.role, permission)) throw new ForbiddenError();
+  return session;
+}
+```
 
 ### 8.3 Session Management
 
 - JWT stored in HttpOnly secure cookie.
 - Session expiry: 24 hours, sliding window (refreshed on activity).
 - Logout clears cookie.
+
+### 8.4 Login Rate Limiting
+
+- In-memory rate limiter (`src/lib/rate-limit.ts`): 5 attempts per 15-minute window per email.
+- Resets on successful login.
+- Returns 429 with `Retry-After` header when limit exceeded.
 
 ---
 
@@ -789,6 +807,11 @@ jidaar-device-management-system/
 3. When creating/editing a device of that type, the form shows the relevant spec fields.
 4. Values are stored in `devices.specifications` as JSONB.
 5. The detail page renders all stored specifications.
+6. Spec field definitions live in `src/lib/spec-fields.ts`, keyed by `device_types.category`.
+
+**Auto-suggest Asset ID:**
+- New devices get a sequential `AST-XXXX` asset ID pre-filled from `/api/devices/next-asset-id`.
+- The endpoint queries the highest existing `assetId` matching `AST-(\d+)` and increments.
 
 **Field sets by type category (hardcoded for MVP, data-driven later):**
 
@@ -960,7 +983,50 @@ volumes:
 
 ---
 
-## 14. Risks & Trade-offs
+## 14. Connection Pooling
+
+### 14.1 Strategy
+
+The app uses `@prisma/adapter-pg` (PrismaPg) which manages a connection pool via the `pg` driver.
+
+**Development:** Direct connection to PostgreSQL (port 5432). No pooling needed — single developer, low concurrency.
+
+**Production with Supabase:** Use Supabase's built-in connection pooler (PgBouncer):
+
+| Parameter | Value |
+|-----------|-------|
+| Pooler host | `db.<project-ref>.supabase.co` |
+| Pooler port | `6543` (transaction mode) |
+| Direct host | `db.<project-ref>.supabase.co` |
+| Direct port | `5432` |
+
+Connection string for production:
+
+```
+DATABASE_URL="postgresql://postgres.<ref>:<password>@db.<ref>.supabase.co:6543/postgres?pgbouncer=true"
+```
+
+### 14.2 Why Transaction Mode
+
+- Supabase pooler uses PgBouncer in **transaction mode** — each transaction gets a connection from the pool, returned after commit/rollback.
+- Prisma's `@prisma/adapter-pg` is compatible with transaction mode.
+- Direct mode (port 5432) bypasses PgBouncer — use for migrations only: `pnpm prisma migrate deploy` with a direct-connection URL.
+
+### 14.3 Pool Size
+
+Default PgBouncer pool size (100 connections) is sufficient for 2–5 concurrent users. If scaling beyond 10 concurrent users, increase `default_pool_size` in PgBouncer config.
+
+### 14.4 Migration vs Runtime
+
+| Operation | Use |
+|-----------|-----|
+| `pnpm prisma migrate deploy` | Direct connection (port 5432) |
+| `pnpm prisma db seed` | Direct connection (port 5432) |
+| Application runtime | Pooler connection (port 6543) |
+
+---
+
+## 15. Risks & Trade-offs
 
 | Risk | Mitigation |
 |------|-----------|
@@ -975,7 +1041,18 @@ volumes:
 
 ---
 
-## 15. Deferred Features Schema Compatibility
+## 16. Error Monitoring
+
+- **Sentry** (`@sentry/nextjs`) captures unhandled exceptions in both client and server code.
+- Config files: `sentry.client.config.ts`, `sentry.server.config.ts`.
+- `handleApiError()` in `src/lib/errors.ts` captures unhandled 500 errors in production via `Sentry.captureException()`.
+- `next.config.ts` wrapped with `withSentryConfig()` for source maps, React component annotations, and auto-instrumentation.
+- Environment variables: `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`.
+- Disabled in development unless `SENTRY_DSN` is explicitly set.
+
+---
+
+## 17. Deferred Features Schema Compatibility
 
 The following MVP decisions are explicitly designed to not block future features:
 

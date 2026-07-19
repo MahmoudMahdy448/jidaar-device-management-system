@@ -8,6 +8,7 @@ import {
 } from "@/lib/errors";
 import { ReturnAssignmentSchema } from "@/lib/validations";
 import { logActivity } from "@/lib/activity-log";
+import { requirePermission } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requirePermission("assignments:write");
     const { id } = await params;
     const body = await request.json();
     const parsed = ReturnAssignmentSchema.safeParse(body);
@@ -63,7 +65,7 @@ export async function POST(
           returnDate,
           closedReason,
           conditionAfter: conditionAfter ?? null,
-          returnedById: parsed.data.returnDate ? null : null,
+          returnedById: null,
           notes: notes ?? assignment.notes,
         },
       });

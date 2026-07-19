@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -23,6 +23,8 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DeviceSchema } from "@/lib/validations";
 import { useReferenceData } from "@/hooks/use-reference-data";
+import { SPEC_FIELDS_BY_CATEGORY } from "@/lib/spec-fields";
+import { toast } from "sonner";
 
 interface DeviceFormProps {
   open: boolean;
@@ -31,18 +33,15 @@ interface DeviceFormProps {
   onSave: (data: Record<string, unknown>) => Promise<void>;
 }
 
-function getErrorMessage(
-  errors: Record<string, unknown>,
-  field: string
-): string | undefined {
-  const error = errors[field] as { message?: string } | undefined;
-  return error?.message;
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="text-xs text-destructive">{message}</p>;
 }
 
 export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormProps) {
   const isEditing = !!device;
 
-  const { data: deviceTypes } = useReferenceData<{ id: string; name: string }>("device-types");
+  const { data: deviceTypes } = useReferenceData<{ id: string; name: string; category?: string }>("device-types");
   const { data: deviceStatuses } = useReferenceData<{ id: string; name: string }>("device-statuses");
   const { data: departments } = useReferenceData<{ id: string; name: string }>("departments");
   const { data: manufacturers } = useReferenceData<{ id: string; name: string }>("manufacturers");
@@ -54,10 +53,40 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
     handleSubmit,
     reset,
     control,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(DeviceSchema),
+    mode: "onBlur",
   });
+
+  const [suggestedAssetId, setSuggestedAssetId] = useState("");
+  const assetIdAppliedRef = useRef(false);
+
+  const selectedDeviceType = deviceTypes.find(
+    (t: { id: string }) => t.id === (device ? device.deviceTypeId : watch("deviceTypeId") ?? ""),
+  );
+  const category = selectedDeviceType?.category as string | undefined;
+  const specFields = category ? SPEC_FIELDS_BY_CATEGORY[category] ?? [] : [];
+
+  useEffect(() => {
+    if (open && !device) {
+      assetIdAppliedRef.current = false;
+      fetch("/api/devices/next-asset-id")
+        .then((r) => r.json())
+        .then((res) => {
+          if (res.data?.assetId) {
+            setSuggestedAssetId(res.data.assetId);
+            if (!assetIdAppliedRef.current) {
+              setValue("assetId", res.data.assetId);
+              assetIdAppliedRef.current = true;
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [open, device, setValue]);
 
   useEffect(() => {
     if (open) {
@@ -66,50 +95,67 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
           name: (device.name as string) ?? "",
           assetId: (device.assetId as string) ?? "",
           deviceTypeId: (device.deviceTypeId as string) ?? "",
-          manufacturerId: (device.manufacturerId as string) ?? "",
-          model: (device.model as string) ?? "",
-          serialNumber: (device.serialNumber as string) ?? "",
-          inventoryNumber: (device.inventoryNumber as string) ?? "",
-          hostname: (device.hostname as string) ?? "",
-          ipAddress: (device.ipAddress as string) ?? "",
-          macAddress: (device.macAddress as string) ?? "",
+          manufacturerId: (device.manufacturerId as string) || null,
+          model: (device.model as string) || null,
+          serialNumber: (device.serialNumber as string) || null,
+          inventoryNumber: (device.inventoryNumber as string) || null,
+          hostname: (device.hostname as string) || null,
+          ipAddress: (device.ipAddress as string) || null,
+          macAddress: (device.macAddress as string) || null,
           statusId: (device.statusId as string) ?? "",
-          departmentId: (device.departmentId as string) ?? "",
-          locationId: (device.locationId as string) ?? "",
-          vendorId: (device.vendorId as string) ?? "",
-          purchaseDate: (device.purchaseDate as string) ?? "",
-          warrantyExpiration: (device.warrantyExpiration as string) ?? "",
-          purchasePrice: (device.purchasePrice as number) ?? "",
-          notes: (device.notes as string) ?? "",
+          departmentId: (device.departmentId as string) || null,
+          locationId: (device.locationId as string) || null,
+          vendorId: (device.vendorId as string) || null,
+          purchaseDate: (device.purchaseDate as string) || null,
+          warrantyExpiration: (device.warrantyExpiration as string) || null,
+          purchasePrice: (device.purchasePrice as number) ?? null,
+          notes: (device.notes as string) || null,
+          specifications: (device.specifications as Record<string, string>) ?? {},
         });
       } else {
         reset({
           name: "",
           assetId: "",
           deviceTypeId: "",
-          manufacturerId: "",
-          model: "",
-          serialNumber: "",
-          inventoryNumber: "",
-          hostname: "",
-          ipAddress: "",
-          macAddress: "",
+          manufacturerId: null,
+          model: null,
+          serialNumber: null,
+          inventoryNumber: null,
+          hostname: null,
+          ipAddress: null,
+          macAddress: null,
           statusId: "",
-          departmentId: "",
-          locationId: "",
-          vendorId: "",
-          purchaseDate: "",
-          warrantyExpiration: "",
-          purchasePrice: "",
-          notes: "",
+          departmentId: null,
+          locationId: null,
+          vendorId: null,
+          purchaseDate: null,
+          warrantyExpiration: null,
+          purchasePrice: null,
+          notes: null,
+          specifications: {},
         });
       }
     }
   }, [open, device, reset]);
 
   const onSubmit = async (data: Record<string, unknown>) => {
-    await onSave(data);
-    onOpenChange(false);
+    const cleaned = { ...data };
+    const nullableFields = [
+      "manufacturerId", "departmentId", "locationId", "vendorId",
+      "model", "serialNumber", "inventoryNumber", "hostname",
+      "ipAddress", "macAddress", "purchaseDate", "warrantyExpiration",
+      "notes",
+    ];
+    for (const f of nullableFields) {
+      if (cleaned[f] === "" || cleaned[f] === undefined) cleaned[f] = null;
+    }
+    if (cleaned.purchasePrice === "" || cleaned.purchasePrice === undefined) cleaned.purchasePrice = null;
+    try {
+      await onSave(cleaned);
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save device");
+    }
   };
 
   return (
@@ -131,11 +177,7 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
           <div className="flex flex-col gap-2">
             <Label htmlFor="name">Name *</Label>
             <Input id="name" {...register("name")} placeholder="Device name" />
-            {getErrorMessage(errors, "name") && (
-              <p className="text-xs text-destructive">
-                {getErrorMessage(errors, "name")}
-              </p>
-            )}
+            <FieldError message={errors.name?.message} />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -145,11 +187,7 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
               {...register("assetId")}
               placeholder="e.g. AST-001"
             />
-            {getErrorMessage(errors, "assetId") && (
-              <p className="text-xs text-destructive">
-                {getErrorMessage(errors, "assetId")}
-              </p>
-            )}
+            <FieldError message={errors.assetId?.message} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -176,11 +214,7 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
                   </Select>
                 )}
               />
-              {getErrorMessage(errors, "deviceTypeId") && (
-                <p className="text-xs text-destructive">
-                  {getErrorMessage(errors, "deviceTypeId")}
-                </p>
-              )}
+              <FieldError message={errors.deviceTypeId?.message} />
             </div>
 
             <div className="flex flex-col gap-2">
@@ -208,11 +242,7 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
                   </Select>
                 )}
               />
-              {getErrorMessage(errors, "statusId") && (
-                <p className="text-xs text-destructive">
-                  {getErrorMessage(errors, "statusId")}
-                </p>
-              )}
+              <FieldError message={errors.statusId?.message} />
             </div>
           </div>
 
@@ -331,44 +361,40 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
           <div className="flex flex-col gap-2">
             <Label htmlFor="model">Model</Label>
             <Input id="model" {...register("model")} placeholder="e.g. Dell OptiPlex 7090" />
+            <FieldError message={errors.model?.message} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="serialNumber">Serial Number</Label>
               <Input id="serialNumber" {...register("serialNumber")} placeholder="Serial number" />
+              <FieldError message={errors.serialNumber?.message} />
             </div>
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="inventoryNumber">Inventory Number</Label>
               <Input id="inventoryNumber" {...register("inventoryNumber")} placeholder="Inventory #" />
+              <FieldError message={errors.inventoryNumber?.message} />
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="hostname">Hostname</Label>
             <Input id="hostname" {...register("hostname")} placeholder="e.g. pc-it-01" />
+            <FieldError message={errors.hostname?.message} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="ipAddress">IP Address</Label>
               <Input id="ipAddress" {...register("ipAddress")} placeholder="192.168.1.100" />
-              {getErrorMessage(errors, "ipAddress") && (
-                <p className="text-xs text-destructive">
-                  {getErrorMessage(errors, "ipAddress")}
-                </p>
-              )}
+              <FieldError message={errors.ipAddress?.message} />
             </div>
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="macAddress">MAC Address</Label>
               <Input id="macAddress" {...register("macAddress")} placeholder="AA:BB:CC:DD:EE:FF" />
-              {getErrorMessage(errors, "macAddress") && (
-                <p className="text-xs text-destructive">
-                  {getErrorMessage(errors, "macAddress")}
-                </p>
-              )}
+              <FieldError message={errors.macAddress?.message} />
             </div>
           </div>
 
@@ -380,6 +406,7 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
                 type="date"
                 {...register("purchaseDate")}
               />
+              <FieldError message={errors.purchaseDate?.message} />
             </div>
 
             <div className="flex flex-col gap-2">
@@ -389,6 +416,7 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
                 type="date"
                 {...register("warrantyExpiration")}
               />
+              <FieldError message={errors.warrantyExpiration?.message} />
             </div>
           </div>
 
@@ -401,11 +429,37 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
               {...register("purchasePrice")}
               placeholder="0.00"
             />
+            <FieldError message={errors.purchasePrice?.message} />
           </div>
+
+          {specFields.length > 0 && (
+            <div className="flex flex-col gap-2 rounded-lg border p-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                Specifications — {category}
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                {specFields.map((field) => (
+                  <div key={field.key} className="flex flex-col gap-2">
+                    <Label htmlFor={`spec-${field.key}`}>{field.label}</Label>
+                    <Input
+                      id={`spec-${field.key}`}
+                      value={(watch("specifications") as Record<string, string>)?.[field.key] ?? ""}
+                      onChange={(e) => {
+                        const current = (watch("specifications") as Record<string, string>) ?? {};
+                        setValue("specifications", { ...current, [field.key]: e.target.value }, { shouldDirty: true });
+                      }}
+                      placeholder={field.label}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="notes">Notes</Label>
             <Textarea id="notes" {...register("notes")} placeholder="Additional notes" />
+            <FieldError message={errors.notes?.message} />
           </div>
 
           <div className="mt-auto flex flex-col gap-2 border-t pt-4">

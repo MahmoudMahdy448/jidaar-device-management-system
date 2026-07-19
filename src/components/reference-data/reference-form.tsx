@@ -121,6 +121,7 @@ export function ReferenceForm({
   } = useForm<FieldValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(SCHEMAS[resource] as any),
+    mode: "onBlur",
   });
 
   useEffect(() => {

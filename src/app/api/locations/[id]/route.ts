@@ -1,5 +1,6 @@
 import { apiSuccess, handleApiError, NotFoundError, ConflictError } from "@/lib/errors";
 import { LocationSchema } from "@/lib/validations";
+import { requirePermission } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requirePermission("locations:write");
     const { prisma } = await import("@/lib/prisma");
     const { id } = await params;
     const body = await request.json();
@@ -79,6 +81,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requirePermission("locations:delete");
     const { prisma } = await import("@/lib/prisma");
     const { id } = await params;
     const existing = await prisma.location.findUnique({ where: { id } });

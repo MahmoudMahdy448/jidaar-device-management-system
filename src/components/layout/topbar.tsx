@@ -37,6 +37,9 @@ interface SearchResult {
     name: string;
     status: { name: string };
     deviceType: { name: string };
+    manufacturer: { name: string } | null;
+    department: { name: string } | null;
+    location: { name: string; building: string; room: string } | null;
   }>;
   users: Array<{
     id: string;
@@ -44,6 +47,7 @@ interface SearchResult {
     lastName: string;
     email: string;
     employeeId: string;
+    department: { name: string } | null;
   }>;
 }
 
@@ -169,6 +173,8 @@ export function Topbar() {
                             <div className="truncate font-medium">{device.name}</div>
                             <div className="truncate text-xs text-muted-foreground">
                               {device.assetId} · {device.deviceType.name}
+                              {device.manufacturer ? ` · ${device.manufacturer.name}` : ""}
+                              {device.department ? ` · ${device.department.name}` : ""}
                             </div>
                           </div>
                           <span className="shrink-0 text-xs text-muted-foreground">
@@ -199,6 +205,7 @@ export function Topbar() {
                             </div>
                             <div className="truncate text-xs text-muted-foreground">
                               {user.email}
+                              {user.department ? ` · ${user.department.name}` : ""}
                             </div>
                           </div>
                           <span className="shrink-0 text-xs text-muted-foreground">

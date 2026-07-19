@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { apiSuccess, handleApiError, NotFoundError, ConflictError, ValidationError } from "@/lib/errors";
 import { logActivity, computeChanges } from "@/lib/activity-log";
+import { requirePermission } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requirePermission("users:write");
     const { prisma } = await import("@/lib/prisma");
     const { id } = await params;
     const body = await request.json();
@@ -168,6 +170,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requirePermission("users:delete");
     const { prisma } = await import("@/lib/prisma");
     const { id } = await params;
 

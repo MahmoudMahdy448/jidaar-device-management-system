@@ -1,6 +1,7 @@
 import { apiSuccess, handleApiError, NotFoundError, ConflictError } from "@/lib/errors";
 import { DeviceSchema } from "@/lib/validations";
 import { logActivity, computeChanges } from "@/lib/activity-log";
+import { requirePermission } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requirePermission("devices:write");
     const { prisma } = await import("@/lib/prisma");
     const { id } = await params;
     const body = await request.json();
@@ -143,6 +145,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requirePermission("devices:delete");
     const { prisma } = await import("@/lib/prisma");
     const { id } = await params;
 

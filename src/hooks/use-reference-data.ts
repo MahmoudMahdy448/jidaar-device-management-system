@@ -32,6 +32,7 @@ export function useReferenceData<T>(resource: ReferenceResource) {
   const path = RESOURCE_PATHS[resource];
   const { data, isLoading, error, mutate } = useSWR<T[]>(path, fetcher, {
     revalidateOnFocus: false,
+    errorRetryCount: 3,
   });
 
   return { data: data ?? [], isLoading, error, mutate };

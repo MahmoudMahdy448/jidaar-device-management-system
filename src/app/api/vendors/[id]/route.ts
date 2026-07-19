@@ -1,5 +1,6 @@
 import { apiSuccess, handleApiError, NotFoundError, ConflictError } from "@/lib/errors";
 import { VendorSchema } from "@/lib/validations";
+import { requirePermission } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requirePermission("vendors:write");
     const { prisma } = await import("@/lib/prisma");
     const { id } = await params;
     const body = await request.json();
@@ -76,6 +78,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requirePermission("vendors:delete");
     const { prisma } = await import("@/lib/prisma");
     const { id } = await params;
     const existing = await prisma.vendor.findUnique({ where: { id } });
