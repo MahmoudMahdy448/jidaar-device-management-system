@@ -27,7 +27,7 @@ Jidaar is an IT Device Management System for tracking hardware assets (desktops,
 | **Tables** | TanStack Table v8 | Latest |
 | **Forms** | React Hook Form + Zod | Latest |
 | **Charts** | Recharts | Latest |
-| **File Storage** | AWS SDK v3 (S3-compatible) | Latest |
+| **File Storage** | PostgreSQL BYTEA (S3 optional) | — |
 | **Testing** | Vitest (unit/integration) + Playwright (E2E) | Latest |
 | **Linting** | ESLint + Prettier | Latest |
 | **Package Manager** | pnpm | Latest |
@@ -98,14 +98,14 @@ Jidaar is an IT Device Management System for tracking hardware assets (desktops,
 └────────────────────────────┼──────────────────────────────┘
                              │
               ┌──────────────┼──────────────┐
-              │              │              │
-        ┌─────┴─────┐ ┌─────┴─────┐ ┌─────┴─────┐
-        │ PostgreSQL │ │    S3     │ │  Browser  │
-        │    (DB)    │ │ (storage) │ │  (client) │
-        └───────────┘ └───────────┘ └───────────┘
+               │              │              │
+         ┌─────┴─────┐ ┌─────┴─────┐ ┌─────┴─────┐
+         │ PostgreSQL │ │    S3     │ │  Browser  │
+         │    (DB)    │ │(optional) │ │  (client) │
+         └───────────┘ └───────────┘ └───────────┘
 ```
 
-**Key principle:** Everything runs in one container. PostgreSQL and S3 are external services — in production they're separate managed services or containers; in dev they're spun up via docker-compose.
+**Key principle:** Everything runs in one container. PostgreSQL is the primary external service (files stored in BYTEA); S3 is optional and currently unused.
 
 ---
 
@@ -156,7 +156,7 @@ erDiagram
 | `manufacturers` | Hardware manufacturers | No |
 | `vendors` | Procurement vendors | No |
 | `assignments` | Device ↔ User assignment records (history) | Yes |
-| `attachments` | S3 file references for device images/files | No (cascade from device) |
+| `attachments` | File storage (BYTEA in PostgreSQL) for device images and signed assignment forms | No (cascade from device) |
 | `activity_logs` | Immutable audit trail (append-only) | No |
 
 ### 4.3 Schema Details
@@ -229,9 +229,12 @@ erDiagram
 - Indexed on `(entity_type, entity_id)` and `created_at`
 
 #### Attachments
-- Direct FK to `device_id` (not polymorphic — Prisma doesn't support polymorphic relations; if we need attachments on other entities later, we add separate tables or handle via raw SQL)
-- `s3_key`: the object key in S3 storage
-- `mime_type` and `size`: for display purposes
+- Polymorphic via nullable FKs: `device_id` (nullable) and `assignment_id` (nullable). Exactly one must be set.
+- `attachment_type`: enum `DEVICE_PHOTO | SIGNED_ASSIGNMENT_FORM | OTHER`
+- `uploaded_by_id`: FK → users (who uploaded)
+- `content`: `BYTEA` column storing file bytes directly in PostgreSQL
+- `s3_key`: nullable, retained for backward compatibility (S3 migration path)
+- `mime_type` and `size`: for display and serving with correct headers
 
 ### 4.4 Indexes (Performance)
 
@@ -258,6 +261,7 @@ All indexes below are designed to keep queries under the 300ms target:
 | `activity_logs` | `(entity_type, entity_id)` | Entity activity lookups |
 | `activity_logs` | `created_at` | Recent activity, sorting |
 | `attachments` | `device_id` | Attachments per device |
+| `attachments` | `assignment_id` | Attachments per assignment |
 
 ### 4.5 Data Integrity Rules (enforced at DB + application layer)
 
@@ -316,7 +320,7 @@ Error responses:
 | Method | Path | Auth | Roles | Description |
 |--------|------|:----:|-------|-------------|
 | GET | `/api/devices` | Yes | All | List devices (paginated, filterable, searchable) |
-| POST | `/api/devices` | Yes | Admin, Tech | Create device |
+| POST | `/api/devices` | Yes | Admin, Tech | Create device (optionally assign to user in one step) |
 | GET | `/api/devices/:id` | Yes | All | Get device detail (includes current assignment, recent activity) |
 | PUT | `/api/devices/:id` | Yes | Admin, Tech | Update device |
 | DELETE | `/api/devices/:id` | Yes | Admin | Soft-delete device |
@@ -331,6 +335,21 @@ Error responses:
 - `statusId`, `deviceTypeId`, `departmentId`, `manufacturerId`, `locationId`, `vendorId` — exact match filters
 - `sort` — field name, prefix `-` for descending (default: `-created_at`)
 - `warrantyExpiringSoon` — boolean, filter devices with warranty expiring within 30 days
+
+**Create request body (with optional inline assignment):**
+```json
+{
+  "name": "Ahmed's Laptop",
+  "assetId": "AST-0001",
+  "deviceTypeId": "uuid",
+  "statusId": "uuid",
+  "manufacturerId": "uuid | null",
+  "model": "Dell Latitude 5540",
+  "serialNumber": "SN-ABC123",
+  "assignedUserId": "uuid | null"
+}
+```
+When `assignedUserId` is provided and status is "Assigned", an assignment record is created atomically in the same transaction as the device. The `assignedById` is set to the current session user. The user is validated to exist and be ACTIVE.
 
 ### 5.3 User Endpoints
 
@@ -427,9 +446,12 @@ Server-side: closes current assignment with closed_reason=TRANSFERRED, opens new
 | Create/edit devices | Yes | Yes | No |
 | Delete (soft) devices | Yes | No | No |
 | Create/edit/transfer/assign/return | Yes | Yes | No |
+| Delete assignments | Yes | No | No |
 | Create/edit users, manage roles | Yes | No | No |
 | Create/edit reference data | Yes | No | No |
 | Manage device types/statuses (Settings) | Yes | No | No |
+| Upload/delete attachments | Yes | Yes | No |
+| View attachments | Yes | Yes | Yes |
 | CSV export | Yes | Yes | Yes |
 
 - Server-side enforcement: every write endpoint checks role before processing. A Read Only user hitting a write endpoint directly gets 403.
@@ -615,9 +637,15 @@ jidaar-device-management-system/
 │   │   │   ├── assignments/
 │   │   │   │   ├── route.ts
 │   │   │   │   ├── [id]/
-│   │   │   │   │   └── return/route.ts
+│   │   │   │   │   ├── route.ts
+│   │   │   │   │   ├── return/route.ts
+│   │   │   │   │   └── attachments/
+│   │   │   │   │       ├── route.ts
+│   │   │   │   │       └── [attachmentId]/route.ts
 │   │   │   │   ├── transfer/route.ts
 │   │   │   │   └── overdue/route.ts
+│   │   │   ├── attachments/
+│   │   │   │   └── [id]/view/route.ts
 │   │   │   ├── departments/route.ts
 │   │   │   ├── departments/[id]/route.ts
 │   │   │   ├── locations/route.ts
@@ -757,10 +785,10 @@ jidaar-device-management-system/
 ```typescript
 // src/lib/auth-helpers.ts
 export async function requirePermission(permission: Permission) {
-  const session = await getSession();
-  if (!session) throw new UnauthorizedError();
-  if (!hasPermission(session.user.role, permission)) throw new ForbiddenError();
-  return session;
+  const session = await requireSession(); // wraps auth() in try-catch
+  const role = session.user.role as UserRole;
+  if (!hasPermission(role, permission)) throw new ForbiddenError();
+  return session; // returns session for use in route handlers
 }
 ```
 
@@ -780,14 +808,14 @@ export async function requirePermission(permission: Permission) {
 
 ## 9. File Storage
 
-- **S3-compatible storage** via AWS SDK v3.
-- Configurable endpoint (works with MinIO for local dev, AWS S3 / Cloudflare R2 for production).
-- Bucket name via `S3_BUCKET` env var.
-- File path pattern: `devices/{deviceId}/{uuid}-{filename}`
+- **PostgreSQL `BYTEA` column** on the `attachments` table stores file content directly in the database.
+- No external storage dependency (S3/MinIO) required for attachments.
 - Upload limit: 10MB per file.
 - Accepted types: images (jpg, png, gif, webp), PDFs, common document formats.
-- Signed URLs for retrieval (no public bucket needed).
-- Delete from S3 on attachment deletion.
+- Files served directly from the database via `GET /api/attachments/[id]/view` with correct `Content-Type` and `Content-Disposition` headers.
+- Delete removes the DB row (cascade handles cleanup).
+
+**Trade-off:** Storing files in PostgreSQL is simpler (no S3 dependency) but increases DB size. At our scale (75–150 devices, <100 attachments), this is acceptable. If attachment volume grows significantly, migrate to S3-compatible storage and replace `content BYTEA` with `s3_key VARCHAR`.
 
 ---
 
@@ -975,11 +1003,9 @@ volumes:
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `NEXTAUTH_SECRET` | Yes | JWT encryption key (generate random 32+ chars) |
 | `NEXTAUTH_URL` | Yes | Application base URL (e.g., http://localhost:3000) |
-| `S3_ENDPOINT` | Yes | S3-compatible storage endpoint URL |
-| `S3_BUCKET` | Yes | S3 bucket name |
-| `S3_ACCESS_KEY` | Yes | S3 access key ID |
-| `S3_SECRET_KEY` | Yes | S3 secret access key |
-| `S3_REGION` | No | S3 region (default: us-east-1) |
+| `SENTRY_DSN` | No | Sentry DSN for error monitoring (disabled if unset) |
+| `SENTRY_ORG` | No | Sentry organization slug |
+| `SENTRY_PROJECT` | No | Sentry project slug |
 
 ---
 

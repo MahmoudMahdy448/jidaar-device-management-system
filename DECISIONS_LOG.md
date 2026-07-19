@@ -120,3 +120,45 @@
 6. **PrismaPg adapter with Supabase connection pooler** (transaction mode on port 6543)
    - **Why:** Supabase's managed PgBouncer handles connection pooling. Direct connection (port 5432) reserved for migrations only.
    - **Rejected:** Direct connection in production (exhausts Supabase connection limits at scale).
+
+---
+
+## Session 4 — Signed Assignment Form Attachments
+
+**Date:** 2026-07-19
+**Phase:** Phase 14 (Signed Assignment Form Attachments)
+
+### Decisions Made
+
+1. **PostgreSQL BYTEA for file storage** (replacing S3)
+   - **Why:** MinIO was never installed; S3 dependency added operational complexity unnecessary at this scale. Storing file bytes directly in PostgreSQL eliminates the external dependency. Attachment volume (<100 files, <10MB each) is well within PostgreSQL's comfortable range.
+   - **Rejected:** S3/MinIO (requires separate service, more configuration, more failure modes). PostgreSQL Large Objects (deprecated interface, harder to work with than BYTEA).
+   - **Trade-off:** Increases DB backup size. Acceptable for current scale; can migrate to S3 later by replacing `content BYTEA` with `s3_key VARCHAR`.
+
+2. **Polymorphic attachment model** via nullable `device_id` + `assignment_id`
+   - **Why:** Prisma doesn't support polymorphic relations. Two nullable FKs with application-level validation (exactly one must be set) is the simplest approach that supports both device photos and assignment forms without schema duplication.
+   - **Rejected:** Separate `device_attachments` and `assignment_attachments` tables (schema duplication, code duplication).
+
+3. **Attachment type enum** (DEVICE_PHOTO, SIGNED_ASSIGNMENT_FORM, OTHER)
+   - **Why:** Allows filtering and conditional display without string matching. Extensible — new types can be added to the enum without changing query logic.
+
+4. **Direct file serving from DB** via `/api/attachments/[id]/view`
+   - **Why:** No signed URLs needed since files are in the database. Response includes correct `Content-Type` and `Content-Disposition` headers for browser rendering.
+
+---
+
+## Session 5 — Device Create & Assign + README Rewrite
+
+**Date:** 2026-07-19
+**Phase:** Phase 15 (Device Create & Assign + README)
+
+### Decisions Made
+
+1. **Device creation with inline assignment** (optional `assignedUserId` field)
+   - **Why:** Workflow friction — creating a device then separately assigning it requires two steps and two page navigations. Adding an optional user select that appears when status is "Assigned" streamlines the common case of procuring and immediately assigning a device.
+   - **Rejected:** Dedicated "Create & Assign" wizard (over-engineered for two fields). Mandatory assignment on create (breaks the workflow for devices that go to inventory first).
+   - **Implementation:** `assignedUserId` is optional in `DeviceSchema`. When set, the API creates an assignment record in the same `$transaction` as the device. User is validated (exists, ACTIVE). `assignedById` is set from the current session.
+
+2. **No-Docker README as primary setup path**
+   - **Why:** Docker adds complexity (Docker Desktop install, resource usage, Windows/macOS performance overhead) that discourages quick local setup. PostgreSQL is straightforward to install natively. README now provides step-by-step instructions for Windows, macOS, and Linux.
+   - **Rejected:** Keeping Docker as the primary path (adds unnecessary dependency for local dev). Removing Docker entirely (useful for CI/CD and team onboarding).

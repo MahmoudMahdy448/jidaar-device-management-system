@@ -219,13 +219,15 @@
 
 ## Completion Notes
 
-- **Completed:** July 18, 2026
-- **All 12 phases (0–11)** are marked as done
+- **Completed:** July 19, 2026
+- **All 15 phases (0–15)** are marked as done
 - Unit tests cover validation schemas and RBAC permissions without requiring a database
 - Integration tests are structured and ready to run against a live database
 - Dockerfile uses a 3-stage build (deps → builder → runner) with Prisma 7 + PrismaPg adapter
 - docker-compose includes PostgreSQL, MinIO, and the app with proper health checks
-- Export button was already present on the assignments page (no changes needed)
+- File attachments stored in PostgreSQL BYTEA (S3 dependency removed)
+- Device creation supports inline assignment via optional `assignedUserId` field
+- README provides complete no-Docker setup instructions for Windows, macOS, and Linux
 - `pnpm build` and `pnpm lint` pass successfully after all changes
 
 ---
@@ -257,6 +259,21 @@
 
 ## Next Task
 
-Phase 14 complete. Signed assignment form attachments fully implemented.
+Phase 15 complete. Device creation with inline assignment and README rewrite done.
 
 - Remaining follow-ups: E2E test coverage expansion, dark mode brand-specific chart colors, Jidaar logo SVG in sidebar header, application-level validation that exactly one of deviceId/assignmentId is set per attachment.
+
+---
+
+## Phase 15 — Device Create & Assign + README Rewrite
+
+- [x] Add `assignedUserId` nullable UUID field to `DeviceSchema` validation — done
+- [x] Device form: watch `statusId`; when status name is `"Assigned"`, show a user select dropdown (fetches up to 200 active users via `useUsers`) — done
+- [x] Device POST API: accept optional `assignedUserId` in payload — done
+- [x] Device POST API: inside the same transaction, create an `Assignment` record when `assignedUserId` is set, with `assignedById` from the current session — done
+- [x] Device POST API: validate user exists and is ACTIVE before creating assignment — done
+- [x] README.md: full no-Docker run instructions (PostgreSQL install, DB creation, env config, migrate, seed, dev server) — done
+- [x] README.md: troubleshooting section (auth failures, port conflicts, seed duplicates, module not found) — done
+- [x] Typecheck verification — clean (only pre-existing test errors) — done
+
+**Acceptance for this phase:** A user can create a device with status "Assigned" and select a user to assign it to in a single form submission. The device and assignment record are created atomically. README provides complete instructions to run the project locally without Docker.
