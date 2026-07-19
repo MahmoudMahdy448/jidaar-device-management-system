@@ -86,6 +86,7 @@ export async function POST(
         returnDate: { old: null, new: returnDate },
         closedReason: { old: null, new: closedReason },
       },
+      actorId: session.user.id,
     });
 
     const assignment = await prisma.assignment.findUnique({

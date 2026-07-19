@@ -75,7 +75,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requirePermission("devices:write");
+    const session = await requirePermission("devices:write");
     const { prisma } = await import("@/lib/prisma");
     const { id } = await params;
     const body = await request.json();
@@ -135,6 +135,7 @@ export async function PUT(
         entityId: id,
         action: "updated",
         changes,
+        actorId: session.user.id,
       });
     }
 
@@ -149,7 +150,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requirePermission("devices:delete");
+    const session = await requirePermission("devices:delete");
     const { prisma } = await import("@/lib/prisma");
     const { id } = await params;
 
@@ -178,6 +179,7 @@ export async function DELETE(
       entityType: "device",
       entityId: id,
       action: "deleted",
+      actorId: session.user.id,
     });
 
     return apiSuccess({ success: true });

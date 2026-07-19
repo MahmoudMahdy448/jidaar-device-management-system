@@ -204,6 +204,7 @@ export async function POST(request: Request) {
         deviceId: { old: null, new: deviceId },
         userId: { old: null, new: userId },
       },
+      actorId: session.user.id,
     });
 
     const assignment = await prisma.assignment.findUnique({

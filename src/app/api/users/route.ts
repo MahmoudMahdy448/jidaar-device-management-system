@@ -78,7 +78,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requirePermission("users:write");
+    const session = await requirePermission("users:write");
     const { hash } = await import("bcryptjs");
     const body = await request.json();
     const parsed = CreateUserSchema.safeParse(body);
@@ -137,6 +137,7 @@ export async function POST(request: Request) {
       entityType: "user",
       entityId: user.id,
       action: "created",
+      actorId: session.user.id,
     });
 
     return apiSuccess(user);

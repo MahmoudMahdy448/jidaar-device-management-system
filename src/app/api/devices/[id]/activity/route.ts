@@ -19,8 +19,20 @@ export async function GET(
       throw new NotFoundError("Device", id);
     }
 
+    const assignmentIds = (
+      await prisma.assignment.findMany({
+        where: { deviceId: id },
+        select: { id: true },
+      })
+    ).map((a) => a.id);
+
     const activityLogs = await prisma.activityLog.findMany({
-      where: { entityType: "device", entityId: id },
+      where: {
+        OR: [
+          { entityType: "device", entityId: id },
+          { entityType: "assignment", entityId: { in: assignmentIds } },
+        ],
+      },
       orderBy: { createdAt: "desc" },
       include: { actor: true },
     });

@@ -142,6 +142,7 @@ export async function POST(request: Request) {
       entityType: "device",
       entityId: device.id,
       action: "created",
+      actorId: session.user.id,
     });
 
     return apiSuccess(device);

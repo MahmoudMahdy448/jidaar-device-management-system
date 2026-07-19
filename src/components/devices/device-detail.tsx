@@ -10,7 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, MapPin, Building2, User, Paperclip } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, MapPin, Building2, User, Paperclip, History, ClipboardList, Info } from "lucide-react";
+import { DeviceHistory } from "@/components/devices/device-history";
 
 interface DeviceDetailProps {
   device: Record<string, unknown> & {
@@ -73,44 +75,14 @@ function isWarrantyActive(
   return new Date(warrantyExpiration) > new Date();
 }
 
-export function DeviceDetail({ device }: DeviceDetailProps) {
+function DeviceInfoTab({ device }: { device: DeviceDetailProps["device"] }) {
   const specifications = (device.specifications as Record<string, unknown>) ?? {};
   const specEntries = Object.entries(specifications).filter(
     ([, v]) => v !== null && v !== undefined && v !== ""
   );
 
-  const warrantyActive = isWarrantyActive(device.warrantyExpiration);
-
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-lg font-semibold text-foreground">
-              {device.name}
-            </h1>
-            <span className="font-mono text-xs text-muted-foreground">
-              {device.assetId}
-            </span>
-          </div>
-          <div className="mt-1 flex items-center gap-2">
-            <Badge
-              variant="outline"
-              style={{
-                borderColor: device.status.color,
-                color: device.status.color,
-              }}
-            >
-              {device.status.name}
-            </Badge>
-            <Badge variant="secondary">{device.deviceType.name}</Badge>
-            {warrantyActive && <Badge variant="secondary">Warranty Active</Badge>}
-          </div>
-        </div>
-      </div>
-
-      <Separator />
-
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="flex flex-col gap-4">
           <h3 className="text-sm font-medium text-foreground">General Information</h3>
@@ -219,70 +191,136 @@ export function DeviceDetail({ device }: DeviceDetailProps) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function AssignmentsTab({ assignments }: { assignments: DeviceDetailProps["device"]["assignments"] }) {
+  return (
+    <div className="flex flex-col gap-4">
+      {assignments.length === 0 ? (
+        <div className="rounded-xl border p-8 text-center">
+          <p className="text-sm text-muted-foreground">No assignments yet.</p>
+        </div>
+      ) : (
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Assigned Date</TableHead>
+                <TableHead>Return Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Assigned By</TableHead>
+                <TableHead className="w-12"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {assignments.map((assignment) => (
+                <TableRow key={assignment.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <User className="size-4 text-muted-foreground" />
+                      <span>
+                        {assignment.user.firstName} {assignment.user.lastName}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{formatDate(assignment.assignmentDate)}</TableCell>
+                  <TableCell>{formatDate(assignment.returnDate)}</TableCell>
+                  <TableCell>
+                    {assignment.returnDate ? (
+                      <Badge variant="secondary">
+                        {assignment.closedReason ?? "Returned"}
+                      </Badge>
+                    ) : (
+                      <Badge variant="default">Active</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {assignment.assignedBy
+                      ? `${assignment.assignedBy.firstName} ${assignment.assignedBy.lastName}`
+                      : "\u2014"}
+                  </TableCell>
+                  <TableCell>
+                    {assignment._count && assignment._count.attachments > 0 ? (
+                      <Badge variant="secondary" className="gap-1">
+                        <Paperclip className="size-3" />
+                        {assignment._count.attachments}
+                      </Badge>
+                    ) : null}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function DeviceDetail({ device }: DeviceDetailProps) {
+  const warrantyActive = isWarrantyActive(device.warrantyExpiration);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-semibold text-foreground">
+              {device.name}
+            </h1>
+            <span className="font-mono text-xs text-muted-foreground">
+              {device.assetId}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center gap-2">
+            <Badge
+              variant="outline"
+              style={{
+                borderColor: device.status.color,
+                color: device.status.color,
+              }}
+            >
+              {device.status.name}
+            </Badge>
+            <Badge variant="secondary">{device.deviceType.name}</Badge>
+            {warrantyActive && <Badge variant="secondary">Warranty Active</Badge>}
+          </div>
+        </div>
+      </div>
 
       <Separator />
 
-      <div className="flex flex-col gap-4">
-        <h3 className="text-sm font-medium text-foreground">Assignment History</h3>
-        {device.assignments.length === 0 ? (
-          <div className="rounded-xl border p-8 text-center">
-            <p className="text-sm text-muted-foreground">No assignments yet.</p>
-          </div>
-        ) : (
-          <div className="rounded-xl border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Assigned Date</TableHead>
-                  <TableHead>Return Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Assigned By</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {device.assignments.map((assignment) => (
-                  <TableRow key={assignment.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <User className="size-4 text-muted-foreground" />
-                        <span>
-                          {assignment.user.firstName} {assignment.user.lastName}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatDate(assignment.assignmentDate)}</TableCell>
-                    <TableCell>{formatDate(assignment.returnDate)}</TableCell>
-                    <TableCell>
-                      {assignment.returnDate ? (
-                        <Badge variant="secondary">
-                          {assignment.closedReason ?? "Returned"}
-                        </Badge>
-                      ) : (
-                        <Badge variant="default">Active</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {assignment.assignedBy
-                        ? `${assignment.assignedBy.firstName} ${assignment.assignedBy.lastName}`
-                        : "\u2014"}
-                    </TableCell>
-                    <TableCell>
-                      {assignment._count && assignment._count.attachments > 0 ? (
-                        <Badge variant="secondary" className="gap-1">
-                          <Paperclip className="size-3" />
-                          {assignment._count.attachments}
-                        </Badge>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
+      <Tabs defaultValue="info">
+        <TabsList variant="line">
+          <TabsTrigger value="info">
+            <Info className="size-4" />
+            Info
+          </TabsTrigger>
+          <TabsTrigger value="assignments">
+            <ClipboardList className="size-4" />
+            Assignments
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            <History className="size-4" />
+            History
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="info">
+          <DeviceInfoTab device={device} />
+        </TabsContent>
+
+        <TabsContent value="assignments">
+          <AssignmentsTab assignments={device.assignments} />
+        </TabsContent>
+
+        <TabsContent value="history">
+          <DeviceHistory deviceId={device.id} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
