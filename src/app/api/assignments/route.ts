@@ -56,11 +56,11 @@ export async function GET(request: Request) {
     if (search) {
       andConditions.push({
         OR: [
-          { device: { name: { contains: search, mode: "insensitive" } } },
-          { device: { assetId: { contains: search, mode: "insensitive" } } },
-          { user: { firstName: { contains: search, mode: "insensitive" } } },
-          { user: { lastName: { contains: search, mode: "insensitive" } } },
-          { user: { email: { contains: search, mode: "insensitive" } } },
+          { device: { name: { contains: search } } },
+          { device: { assetId: { contains: search } } },
+          { user: { firstName: { contains: search } } },
+          { user: { lastName: { contains: search } } },
+          { user: { email: { contains: search } } },
         ],
       });
     }

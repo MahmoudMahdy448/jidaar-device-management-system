@@ -16,9 +16,9 @@ export async function GET(request: Request) {
 
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { assetId: { contains: search, mode: "insensitive" } },
-        { serialNumber: { contains: search, mode: "insensitive" } },
+        { name: { contains: search } },
+        { assetId: { contains: search } },
+        { serialNumber: { contains: search } },
       ];
     }
     if (statusId) where.statusId = statusId;

@@ -26,13 +26,13 @@ export async function GET(request: Request) {
 
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { assetId: { contains: search, mode: "insensitive" } },
-        { model: { contains: search, mode: "insensitive" } },
-        { serialNumber: { contains: search, mode: "insensitive" } },
-        { ipAddress: { contains: search, mode: "insensitive" } },
-        { macAddress: { contains: search, mode: "insensitive" } },
-        { manufacturer: { name: { contains: search, mode: "insensitive" } } },
+        { name: { contains: search } },
+        { assetId: { contains: search } },
+        { model: { contains: search } },
+        { serialNumber: { contains: search } },
+        { ipAddress: { contains: search } },
+        { macAddress: { contains: search } },
+        { manufacturer: { name: { contains: search } } },
       ];
     }
 

@@ -3,7 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 // ─── Enums ───────────────────────────────────────────────
@@ -37,13 +38,13 @@ enum AttachmentType {
 // ─── Users ───────────────────────────────────────────────
 
 model User {
-  id             String      @id @default(uuid()) @db.Uuid
+  id             String      @id @default(uuid()) @db.VarChar(36)
   employeeId     String      @unique @map("employee_id") @db.VarChar(50)
   firstName      String      @map("first_name") @db.VarChar(100)
   lastName       String      @map("last_name") @db.VarChar(100)
   email          String      @unique @db.VarChar(255)
   phone          String?     @db.VarChar(20)
-  departmentId   String?     @map("department_id") @db.Uuid
+  departmentId   String?     @map("department_id") @db.VarChar(36)
   jobTitle       String?     @map("job_title") @db.VarChar(100)
   officeLocation String?     @map("office_location") @db.VarChar(100)
   role           UserRole    @default(READ_ONLY)
@@ -60,9 +61,9 @@ model User {
   activityLogs    ActivityLog[]
   uploadedAttachments Attachment[]
 
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt DateTime? @map("deleted_at") @db.DateTime(3)
 
   @@index([departmentId])
   @@index([status])
@@ -73,24 +74,24 @@ model User {
 // ─── Devices ─────────────────────────────────────────────
 
 model Device {
-  id                   String    @id @default(uuid()) @db.Uuid
+  id                   String    @id @default(uuid()) @db.VarChar(36)
   assetId              String    @unique @map("asset_id") @db.VarChar(50)
   name                 String    @db.VarChar(200)
-  deviceTypeId         String    @map("device_type_id") @db.Uuid
-  manufacturerId       String?   @map("manufacturer_id") @db.Uuid
+  deviceTypeId         String    @map("device_type_id") @db.VarChar(36)
+  manufacturerId       String?   @map("manufacturer_id") @db.VarChar(36)
   model                String?   @db.VarChar(200)
   serialNumber         String?   @map("serial_number") @db.VarChar(200)
   inventoryNumber      String?   @map("inventory_number") @db.VarChar(100)
   hostname             String?   @db.VarChar(200)
   ipAddress            String?   @map("ip_address") @db.VarChar(45)
   macAddress           String?   @map("mac_address") @db.VarChar(17)
-  statusId             String    @map("status_id") @db.Uuid
-  departmentId         String?   @map("department_id") @db.Uuid
-  locationId           String?   @map("location_id") @db.Uuid
+  statusId             String    @map("status_id") @db.VarChar(36)
+  departmentId         String?   @map("department_id") @db.VarChar(36)
+  locationId           String?   @map("location_id") @db.VarChar(36)
   specifications       Json      @default("{}")
   purchaseDate         DateTime? @map("purchase_date") @db.Date
   warrantyExpiration   DateTime? @map("warranty_expiration") @db.Date
-  vendorId             String?   @map("vendor_id") @db.Uuid
+  vendorId             String?   @map("vendor_id") @db.VarChar(36)
   purchasePrice        Decimal?  @map("purchase_price") @db.Decimal(12, 2)
   notes                String?   @db.Text
 
@@ -104,9 +105,9 @@ model Device {
   assignments  Assignment[]
   attachments  Attachment[]
 
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt DateTime? @map("deleted_at") @db.DateTime(3)
 
   @@index([statusId])
   @@index([deviceTypeId])
@@ -121,15 +122,15 @@ model Device {
 // ─── Device Types ────────────────────────────────────────
 
 model DeviceType {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(uuid()) @db.VarChar(36)
   name        String   @unique @db.VarChar(100)
   description String?  @db.Text
   category    String?  @db.VarChar(100)
 
   devices Device[]
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(3)
 
   @@map("device_types")
 }
@@ -137,15 +138,15 @@ model DeviceType {
 // ─── Device Statuses ─────────────────────────────────────
 
 model DeviceStatus {
-  id        String  @id @default(uuid()) @db.Uuid
+  id        String  @id @default(uuid()) @db.VarChar(36)
   name      String  @unique @db.VarChar(50)
   color     String  @db.VarChar(20)
   sortOrder Int     @default(0) @map("sort_order")
 
   devices Device[]
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(3)
 
   @@map("device_statuses")
 }
@@ -153,15 +154,15 @@ model DeviceStatus {
 // ─── Departments ─────────────────────────────────────────
 
 model Department {
-  id   String  @id @default(uuid()) @db.Uuid
+  id   String  @id @default(uuid()) @db.VarChar(36)
   name String  @unique @db.VarChar(100)
   code String? @unique @db.VarChar(20)
 
   users   User[]
   devices Device[]
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(3)
 
   @@map("departments")
 }
@@ -169,7 +170,7 @@ model Department {
 // ─── Locations ───────────────────────────────────────────
 
 model Location {
-  id       String  @id @default(uuid()) @db.Uuid
+  id       String  @id @default(uuid()) @db.VarChar(36)
   name     String  @db.VarChar(200)
   building String? @db.VarChar(100)
   floor    String? @db.VarChar(20)
@@ -177,8 +178,8 @@ model Location {
 
   devices Device[]
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(3)
 
   @@unique([name, building, floor, room])
   @@map("locations")
@@ -187,14 +188,14 @@ model Location {
 // ─── Manufacturers ───────────────────────────────────────
 
 model Manufacturer {
-  id      String  @id @default(uuid()) @db.Uuid
+  id      String  @id @default(uuid()) @db.VarChar(36)
   name    String  @unique @db.VarChar(200)
   website String? @db.VarChar(500)
 
   devices Device[]
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(3)
 
   @@map("manufacturers")
 }
@@ -202,7 +203,7 @@ model Manufacturer {
 // ─── Vendors ─────────────────────────────────────────────
 
 model Vendor {
-  id          String  @id @default(uuid()) @db.Uuid
+  id          String  @id @default(uuid()) @db.VarChar(36)
   name        String  @unique @db.VarChar(200)
   contactName String? @map("contact_name") @db.VarChar(200)
   email       String? @db.VarChar(255)
@@ -211,8 +212,8 @@ model Vendor {
 
   devices Device[]
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(3)
 
   @@map("vendors")
 }
@@ -220,11 +221,11 @@ model Vendor {
 // ─── Assignments ─────────────────────────────────────────
 
 model Assignment {
-  id                  String                  @id @default(uuid()) @db.Uuid
-  deviceId            String                  @map("device_id") @db.Uuid
-  userId              String                  @map("user_id") @db.Uuid
-  assignedById        String?                 @map("assigned_by_id") @db.Uuid
-  returnedById        String?                 @map("returned_by_id") @db.Uuid
+  id                  String                  @id @default(uuid()) @db.VarChar(36)
+  deviceId            String                  @map("device_id") @db.VarChar(36)
+  userId              String                  @map("user_id") @db.VarChar(36)
+  assignedById        String?                 @map("assigned_by_id") @db.VarChar(36)
+  returnedById        String?                 @map("returned_by_id") @db.VarChar(36)
   assignmentDate      DateTime                @map("assignment_date") @db.Date
   expectedReturnDate  DateTime?               @map("expected_return_date") @db.Date
   returnDate          DateTime?               @map("return_date") @db.Date
@@ -240,9 +241,9 @@ model Assignment {
 
   attachments Attachment[]
 
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt DateTime? @map("deleted_at") @db.DateTime(3)
 
   @@index([deviceId])
   @@index([userId])
@@ -253,23 +254,23 @@ model Assignment {
 // ─── Attachments ─────────────────────────────────────────
 
 model Attachment {
-  id             String         @id @default(uuid()) @db.Uuid
-  deviceId       String?        @map("device_id") @db.Uuid
-  assignmentId   String?        @map("assignment_id") @db.Uuid
+  id             String         @id @default(uuid()) @db.VarChar(36)
+  deviceId       String?        @map("device_id") @db.VarChar(36)
+  assignmentId   String?        @map("assignment_id") @db.VarChar(36)
   attachmentType AttachmentType @default(DEVICE_PHOTO) @map("attachment_type")
   filename       String         @db.VarChar(255)
   mimeType       String?        @map("mime_type") @db.VarChar(100)
   size           BigInt?        @db.BigInt
-  content        Bytes          @db.ByteA
+  content        Bytes?         @db.LongBlob
   s3Key          String?        @map("s3_key") @db.VarChar(500)
   s3Bucket       String?        @map("s3_bucket") @db.VarChar(200)
-  uploadedById   String?        @map("uploaded_by_id") @db.Uuid
+  uploadedById   String?        @map("uploaded_by_id") @db.VarChar(36)
 
   device     Device?     @relation(fields: [deviceId], references: [id])
   assignment Assignment? @relation(fields: [assignmentId], references: [id])
   uploadedBy User?       @relation(fields: [uploadedById], references: [id])
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
 
   @@index([deviceId])
   @@index([assignmentId])
@@ -279,16 +280,16 @@ model Attachment {
 // ─── Activity Logs ───────────────────────────────────────
 
 model ActivityLog {
-  id         String  @id @default(uuid()) @db.Uuid
+  id         String  @id @default(uuid()) @db.VarChar(36)
   entityType String  @map("entity_type") @db.VarChar(50)
-  entityId   String  @map("entity_id") @db.Uuid
+  entityId   String  @map("entity_id") @db.VarChar(36)
   action     String  @db.VarChar(50)
-  actorId    String? @map("actor_id") @db.Uuid
+  actorId    String? @map("actor_id") @db.VarChar(36)
   changes    Json?
 
   actor User? @relation(fields: [actorId], references: [id])
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
 
   @@index([entityType, entityId])
   @@index([createdAt])

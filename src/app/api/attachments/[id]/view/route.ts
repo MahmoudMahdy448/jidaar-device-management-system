@@ -26,6 +26,10 @@ export async function GET(
       throw new NotFoundError("Attachment", id);
     }
 
+    if (!attachment.content) {
+      return new Response("No content available", { status: 404 });
+    }
+
     const buffer = Buffer.from(attachment.content);
 
     return new Response(buffer, {

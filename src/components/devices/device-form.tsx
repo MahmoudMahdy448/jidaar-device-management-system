@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   Sheet,
   SheetContent,
@@ -68,7 +68,6 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
   );
   const { users } = useUsers(isAssignedStatus ? { pageSize: 200, sortBy: "firstName", sortOrder: "asc" } : {});
 
-  const [suggestedAssetId, setSuggestedAssetId] = useState("");
   const assetIdAppliedRef = useRef(false);
 
   const selectedDeviceType = deviceTypes.find(
@@ -84,7 +83,6 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
         .then((r) => r.json())
         .then((res) => {
           if (res.data?.assetId) {
-            setSuggestedAssetId(res.data.assetId);
             if (!assetIdAppliedRef.current) {
               setValue("assetId", res.data.assetId);
               assetIdAppliedRef.current = true;

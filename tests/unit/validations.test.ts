@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   DeviceSchema,
-  UserSchema,
+  CreateUserSchema,
   DepartmentSchema,
   AssignmentSchema,
 } from "@/lib/validations";
@@ -86,36 +86,38 @@ describe("UserSchema", () => {
     firstName: "John",
     lastName: "Doe",
     email: "john@example.com",
+    employeeId: "EMP-001",
+    password: "password123",
   };
 
   it("passes with valid user data", () => {
-    const result = UserSchema.safeParse(validUser);
+    const result = CreateUserSchema.safeParse(validUser);
     expect(result.success).toBe(true);
   });
 
   it("fails when email is missing", () => {
     const data = { ...validUser };
     delete data.email;
-    const result = UserSchema.safeParse(data);
+    const result = CreateUserSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
 
   it("fails with invalid email", () => {
-    const result = UserSchema.safeParse({ ...validUser, email: "not-an-email" });
+    const result = CreateUserSchema.safeParse({ ...validUser, email: "not-an-email" });
     expect(result.success).toBe(false);
   });
 
   it("fails when firstName is missing", () => {
     const data = { ...validUser };
     delete data.firstName;
-    const result = UserSchema.safeParse(data);
+    const result = CreateUserSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
 
   it("fails when lastName is missing", () => {
     const data = { ...validUser };
     delete data.lastName;
-    const result = UserSchema.safeParse(data);
+    const result = CreateUserSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
 });
