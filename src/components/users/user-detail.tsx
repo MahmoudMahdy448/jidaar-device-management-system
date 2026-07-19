@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { User, Mail, Phone, Building2, MapPin, Briefcase } from "lucide-react";
+import { User, Mail, Phone, Building2, MapPin, Briefcase, Paperclip } from "lucide-react";
 import { useUserAssignments } from "@/hooks/use-users";
 
 interface UserDetailProps {
@@ -60,7 +60,7 @@ function formatDate(date: string | null | undefined): string {
 }
 
 export function UserDetail({ user }: UserDetailProps) {
-  const { assignments, isLoading: assignmentsLoading } = useUserAssignments(user.id);
+  const { assignments, isLoading: assignmentsLoading, error: assignmentsError } = useUserAssignments(user.id);
   const currentAssignments = (assignments as Array<Record<string, unknown>>).filter(
     (a) => !a.returnDate
   );
@@ -171,6 +171,10 @@ export function UserDetail({ user }: UserDetailProps) {
           <div className="rounded-xl border p-8 text-center">
             <p className="text-sm text-muted-foreground">Loading assignments...</p>
           </div>
+        ) : assignmentsError ? (
+          <div className="rounded-xl border p-8 text-center">
+            <p className="text-sm text-destructive">Failed to load assignments.</p>
+          </div>
         ) : currentAssignments.length === 0 ? (
           <div className="rounded-xl border p-8 text-center">
             <p className="text-sm text-muted-foreground">No devices currently assigned.</p>
@@ -191,17 +195,25 @@ export function UserDetail({ user }: UserDetailProps) {
                         {(device as { assetId: string }).assetId}
                       </p>
                     </div>
-                    {deviceStatus && (
-                      <Badge
-                        variant="outline"
-                        style={{
-                          borderColor: deviceStatus.color as string,
-                          color: deviceStatus.color as string,
-                        }}
-                      >
-                        {deviceStatus.name as string}
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {((assignment as { _count?: { attachments: number } })._count?.attachments ?? 0) > 0 && (
+                        <Badge variant="secondary" className="gap-1">
+                          <Paperclip className="size-3" />
+                          {(assignment as { _count: { attachments: number } })._count.attachments}
+                        </Badge>
+                      )}
+                      {deviceStatus && (
+                        <Badge
+                          variant="outline"
+                          style={{
+                            borderColor: deviceStatus.color as string,
+                            color: deviceStatus.color as string,
+                          }}
+                        >
+                          {deviceStatus.name as string}
+                        </Badge>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               );
@@ -218,6 +230,10 @@ export function UserDetail({ user }: UserDetailProps) {
           <div className="rounded-xl border p-8 text-center">
             <p className="text-sm text-muted-foreground">Loading...</p>
           </div>
+        ) : assignmentsError ? (
+          <div className="rounded-xl border p-8 text-center">
+            <p className="text-sm text-destructive">Failed to load assignments.</p>
+          </div>
         ) : pastAssignments.length === 0 ? (
           <div className="rounded-xl border p-8 text-center">
             <p className="text-sm text-muted-foreground">No past assignments.</p>
@@ -231,6 +247,7 @@ export function UserDetail({ user }: UserDetailProps) {
                   <TableHead>Assigned Date</TableHead>
                   <TableHead>Return Date</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -254,6 +271,14 @@ export function UserDetail({ user }: UserDetailProps) {
                         <Badge variant="secondary">
                           {(assignment.closedReason as string) ?? "Returned"}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {((assignment as { _count?: { attachments: number } })._count?.attachments ?? 0) > 0 && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Paperclip className="size-3" />
+                            {(assignment as { _count: { attachments: number } })._count.attachments}
+                          </Badge>
+                        )}
                       </TableCell>
                     </TableRow>
                   );

@@ -86,5 +86,9 @@ export function handleApiError(error: unknown): Response {
   if (process.env.NODE_ENV === "production") {
     import("@sentry/nextjs").then((Sentry) => Sentry.captureException(error));
   }
-  return apiError(new AppError(500, "INTERNAL_ERROR", "An unexpected error occurred"));
+  const message =
+    process.env.NODE_ENV !== "production"
+      ? error instanceof Error ? error.message : "An unexpected error occurred"
+      : "An unexpected error occurred";
+  return apiError(new AppError(500, "INTERNAL_ERROR", message));
 }

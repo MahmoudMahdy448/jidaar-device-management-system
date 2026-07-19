@@ -137,6 +137,7 @@ export const DeviceSchema = z.object({
   purchasePrice: nullableNumber,
   notes: nullableString,
   specifications: z.record(z.string(), z.string()).optional(),
+  assignedUserId: nullableUuid,
 });
 
 export const CreateUserSchema = z.object({

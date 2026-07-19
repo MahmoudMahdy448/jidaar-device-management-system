@@ -82,7 +82,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requirePermission("devices:write");
+    const session = await requirePermission("devices:write");
     const body = await request.json();
     const parsed = DeviceSchema.safeParse(body);
 
@@ -95,22 +95,47 @@ export async function POST(request: Request) {
       throw new ValidationError("Validation failed", details);
     }
 
+    const { assignedUserId, ...deviceData } = parsed.data;
+
     const device = await prisma.$transaction(async (tx) => {
       const existing = await tx.device.findFirst({
         where: {
           OR: [
-            { assetId: parsed.data.assetId },
-            ...(parsed.data.serialNumber ? [{ serialNumber: parsed.data.serialNumber }] : []),
+            { assetId: deviceData.assetId },
+            ...(deviceData.serialNumber ? [{ serialNumber: deviceData.serialNumber }] : []),
           ],
         },
       });
 
       if (existing) {
-        const field = existing.assetId === parsed.data.assetId ? "assetId" : "serialNumber";
+        const field = existing.assetId === deviceData.assetId ? "assetId" : "serialNumber";
         throw new ConflictError(`A device with this ${field} already exists`);
       }
 
-      return tx.device.create({ data: parsed.data });
+      const newDevice = await tx.device.create({ data: deviceData });
+
+      if (assignedUserId) {
+        const assignee = await tx.user.findFirst({
+          where: { id: assignedUserId, deletedAt: null },
+        });
+        if (!assignee) {
+          throw new ValidationError("Selected user not found", { assignedUserId: "User not found" });
+        }
+        if (assignee.status !== "ACTIVE") {
+          throw new ConflictError("Cannot assign device to an inactive user");
+        }
+
+        await tx.assignment.create({
+          data: {
+            deviceId: newDevice.id,
+            userId: assignedUserId,
+            assignedById: session.user.id,
+            assignmentDate: new Date(),
+          },
+        });
+      }
+
+      return newDevice;
     });
 
     await logActivity({

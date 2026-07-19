@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { useAssignment } from "@/hooks/use-assignments";
+import { AttachmentSection } from "@/components/attachments/attachment-section";
 
 function formatDate(date: string | null | undefined): string {
   if (!date) return "\u2014";
@@ -256,6 +257,10 @@ export default function AssignmentDetailPage({
           </div>
         </>
       )}
+
+      <Separator />
+
+      <AttachmentSection assignmentId={id} />
     </div>
   );
 }

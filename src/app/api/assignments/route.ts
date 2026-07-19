@@ -24,24 +24,48 @@ export async function GET(request: Request) {
     const userId = searchParams.get("userId");
     const deviceId = searchParams.get("deviceId");
     const overdue = searchParams.get("overdue");
+    const search = searchParams.get("search");
+    const departmentId = searchParams.get("departmentId");
+    const deviceTypeId = searchParams.get("deviceTypeId");
     const sortBy = searchParams.get("sortBy") ?? "assignmentDate";
     const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
 
-    const where: Record<string, unknown> = { deletedAt: null };
+    const andConditions: Record<string, unknown>[] = [{ deletedAt: null }];
 
     if (status === "open") {
-      where.returnDate = null;
+      andConditions.push({ returnDate: null });
     } else if (status === "closed") {
-      where.returnDate = { not: null };
+      andConditions.push({ returnDate: { not: null } });
     }
 
-    if (userId) where.userId = userId;
-    if (deviceId) where.deviceId = deviceId;
+    if (userId) andConditions.push({ userId });
+    if (deviceId) andConditions.push({ deviceId });
 
     if (overdue === "true") {
-      where.returnDate = null;
-      where.expectedReturnDate = { lt: new Date() };
+      andConditions.push({ returnDate: null });
+      andConditions.push({ expectedReturnDate: { lt: new Date() } });
     }
+
+    const deviceFilter: Record<string, unknown> = {};
+    if (departmentId) deviceFilter.departmentId = departmentId;
+    if (deviceTypeId) deviceFilter.deviceTypeId = deviceTypeId;
+    if (Object.keys(deviceFilter).length > 0) {
+      andConditions.push({ device: deviceFilter });
+    }
+
+    if (search) {
+      andConditions.push({
+        OR: [
+          { device: { name: { contains: search, mode: "insensitive" } } },
+          { device: { assetId: { contains: search, mode: "insensitive" } } },
+          { user: { firstName: { contains: search, mode: "insensitive" } } },
+          { user: { lastName: { contains: search, mode: "insensitive" } } },
+          { user: { email: { contains: search, mode: "insensitive" } } },
+        ],
+      });
+    }
+
+    const where = { AND: andConditions };
 
     const allowedSortFields: Record<string, string> = {
       assignmentDate: "assignmentDate",

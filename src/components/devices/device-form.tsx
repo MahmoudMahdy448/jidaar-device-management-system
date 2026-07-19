@@ -24,6 +24,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { DeviceSchema } from "@/lib/validations";
 import { useReferenceData } from "@/hooks/use-reference-data";
 import { SPEC_FIELDS_BY_CATEGORY } from "@/lib/spec-fields";
+import { useUsers } from "@/hooks/use-users";
 import { toast } from "sonner";
 
 interface DeviceFormProps {
@@ -60,6 +61,12 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
     resolver: zodResolver(DeviceSchema),
     mode: "onBlur",
   });
+
+  const watchedStatusId = watch("statusId");
+  const isAssignedStatus = deviceStatuses.some(
+    (s: { id: string; name: string }) => s.id === watchedStatusId && s.name === "Assigned",
+  );
+  const { users } = useUsers(isAssignedStatus ? { pageSize: 200, sortBy: "firstName", sortOrder: "asc" } : {});
 
   const [suggestedAssetId, setSuggestedAssetId] = useState("");
   const assetIdAppliedRef = useRef(false);
@@ -111,6 +118,7 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
           purchasePrice: (device.purchasePrice as number) ?? null,
           notes: (device.notes as string) || null,
           specifications: (device.specifications as Record<string, string>) ?? {},
+          assignedUserId: null,
         });
       } else {
         reset({
@@ -133,6 +141,7 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
           purchasePrice: null,
           notes: null,
           specifications: {},
+          assignedUserId: null,
         });
       }
     }
@@ -144,7 +153,7 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
       "manufacturerId", "departmentId", "locationId", "vendorId",
       "model", "serialNumber", "inventoryNumber", "hostname",
       "ipAddress", "macAddress", "purchaseDate", "warrantyExpiration",
-      "notes",
+      "notes", "assignedUserId",
     ];
     for (const f of nullableFields) {
       if (cleaned[f] === "" || cleaned[f] === undefined) cleaned[f] = null;
@@ -453,6 +462,34 @@ export function DeviceForm({ open, onOpenChange, device, onSave }: DeviceFormPro
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {isAssignedStatus && (
+            <div className="flex flex-col gap-2">
+              <Label>Assign to User</Label>
+              <Controller
+                name="assignedUserId"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value ?? ""}
+                    onValueChange={(val) => field.onChange(val || null)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((u: { id: string; firstName: string; lastName: string; email: string }) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.firstName} {u.lastName} ({u.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <FieldError message={errors.assignedUserId?.message} />
             </div>
           )}
 

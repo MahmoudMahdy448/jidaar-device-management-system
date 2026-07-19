@@ -18,6 +18,9 @@ interface AssignmentFilters {
   userId?: string;
   deviceId?: string;
   overdue?: boolean;
+  search?: string;
+  departmentId?: string;
+  deviceTypeId?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
 }

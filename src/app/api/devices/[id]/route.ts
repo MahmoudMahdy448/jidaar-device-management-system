@@ -44,9 +44,11 @@ export async function GET(
         manufacturer: true,
         vendor: true,
         assignments: {
-          where: { returnDate: null },
-          take: 1,
-          include: { user: true },
+          orderBy: { assignmentDate: "desc" },
+          include: {
+            user: true,
+            _count: { select: { attachments: true } },
+          },
         },
       },
     });

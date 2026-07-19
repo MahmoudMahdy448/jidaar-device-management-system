@@ -230,8 +230,33 @@
 
 ---
 
+## Phase 14 — Signed Assignment Form Attachments
+
+- [x] Schema: Extend `Attachment` model with `assignmentId`, `uploadedById`, `attachmentType` fields; make `deviceId` nullable; add `AttachmentType` enum (DEVICE_PHOTO, SIGNED_ASSIGNMENT_FORM, OTHER) — done
+- [x] Schema: Add `attachments Attachment[]` reverse relation to `Assignment` model, `uploadedAttachments` to `User` — done
+- [x] Migration: `20260719001647_add_assignment_attachments` — backward compatible (existing device attachments unaffected) — done
+- [x] S3 utility: `src/lib/s3.ts` — upload, delete, presigned URL generation — done
+- [x] API: `POST /api/assignments/[id]/attachments` — multipart upload, validates PDF/JPEG/PNG, max 10MB, stores to S3 — done
+- [x] API: `GET /api/assignments/[id]/attachments` — list attachments with uploadedBy info — done
+- [x] API: `DELETE /api/assignments/[id]/attachments/[attachmentId]` — S3 delete + DB delete + activity log — done
+- [x] API: `GET /api/attachments/[id]/view` — returns time-limited presigned URL for authenticated viewing — done
+- [x] Hook: `useAssignmentAttachments` (SWR) — done
+- [x] UI: `AttachmentSection` component — upload, view, delete signed forms — done
+- [x] UI: Assignment detail page — AttachmentSection with full CRUD — done
+- [x] UI: Device detail page — attachment count badges in assignment history table — done
+- [x] UI: User detail page — attachment count badges in current + past assignment views — done
+- [x] Device API: Return all assignments (not just active) with attachment counts — done
+- [x] User assignments API: Include attachment counts — done
+- [x] All mutating routes enforce `requirePermission("assignments:write")` — done
+- [x] Activity logging for upload and deletion events — done
+- [x] Typecheck verification — clean (only pre-existing test errors) — done
+
+**Acceptance for this phase:** Signed assignment forms can be uploaded as PDF/JPEG/PNG to any assignment record, viewed via signed URLs, and deleted. Attachment indicators appear on device and user detail pages. All uploads/deletions are audit-logged. Type check passes.
+
+---
+
 ## Next Task
 
-Phase 13 complete. Security hardening, reliability, and UX improvements shipped.
+Phase 14 complete. Signed assignment form attachments fully implemented.
 
-- Remaining follow-ups: E2E test coverage expansion, dark mode brand-specific chart colors, Jidaar logo SVG in sidebar header.
+- Remaining follow-ups: E2E test coverage expansion, dark mode brand-specific chart colors, Jidaar logo SVG in sidebar header, application-level validation that exactly one of deviceId/assignmentId is set per attachment.

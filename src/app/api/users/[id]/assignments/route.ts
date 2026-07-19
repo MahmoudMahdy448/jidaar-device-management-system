@@ -1,4 +1,6 @@
 import { apiSuccess, handleApiError, NotFoundError } from "@/lib/errors";
+import { requirePermission } from "@/lib/auth-helpers";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { prisma } = await import("@/lib/prisma");
+    await requirePermission("users:read");
     const { id } = await params;
 
     const user = await prisma.user.findUnique({
@@ -38,6 +40,7 @@ export async function GET(
         returnedBy: {
           select: { id: true, firstName: true, lastName: true },
         },
+        _count: { select: { attachments: true } },
       },
     });
 

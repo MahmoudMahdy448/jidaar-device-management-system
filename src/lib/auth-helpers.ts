@@ -18,7 +18,13 @@ export interface Session {
  * Retrieves the current session. Throws UnauthorizedError if not authenticated.
  */
 export async function requireSession(): Promise<Session> {
-  const session = await auth();
+  let session;
+  try {
+    session = await auth();
+  } catch (err) {
+    console.error("Auth() threw an error:", err);
+    throw new UnauthorizedError();
+  }
   if (!session?.user?.id) {
     throw new UnauthorizedError();
   }

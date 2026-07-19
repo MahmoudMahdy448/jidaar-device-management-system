@@ -9,6 +9,8 @@ export type Permission =
   | "users:delete"
   | "assignments:read"
   | "assignments:write"
+  | "assignments:delete"
+  | "attachments:read"
   | "departments:read"
   | "departments:write"
   | "departments:delete"
@@ -36,7 +38,8 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ADMIN: [
     "devices:read", "devices:write", "devices:delete",
     "users:read", "users:write", "users:delete",
-    "assignments:read", "assignments:write",
+    "assignments:read", "assignments:write", "assignments:delete",
+    "attachments:read",
     "departments:read", "departments:write", "departments:delete",
     "locations:read", "locations:write", "locations:delete",
     "manufacturers:read", "manufacturers:write", "manufacturers:delete",
@@ -52,6 +55,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "devices:read", "devices:write",
     "users:read",
     "assignments:read", "assignments:write",
+    "attachments:read",
     "departments:read",
     "locations:read",
     "manufacturers:read",
@@ -66,6 +70,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "devices:read",
     "users:read",
     "assignments:read",
+    "attachments:read",
     "departments:read",
     "locations:read",
     "manufacturers:read",

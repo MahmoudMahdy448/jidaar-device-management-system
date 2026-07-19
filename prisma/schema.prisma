@@ -28,6 +28,12 @@ enum AssignmentClosedReason {
   DEACTIVATED
 }
 
+enum AttachmentType {
+  DEVICE_PHOTO
+  SIGNED_ASSIGNMENT_FORM
+  OTHER
+}
+
 // ─── Users ───────────────────────────────────────────────
 
 model User {
@@ -52,6 +58,7 @@ model User {
   assignedByMe    Assignment[] @relation("AssignedByUser")
   returnedByMe    Assignment[] @relation("ReturnedByUser")
   activityLogs    ActivityLog[]
+  uploadedAttachments Attachment[]
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
@@ -231,6 +238,8 @@ model Assignment {
   assignedBy User?  @relation("AssignedByUser", fields: [assignedById], references: [id])
   returnedBy User?  @relation("ReturnedByUser", fields: [returnedById], references: [id])
 
+  attachments Attachment[]
+
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
@@ -244,19 +253,26 @@ model Assignment {
 // ─── Attachments ─────────────────────────────────────────
 
 model Attachment {
-  id        String   @id @default(uuid()) @db.Uuid
-  deviceId  String   @map("device_id") @db.Uuid
-  filename  String   @db.VarChar(255)
-  mimeType  String?  @map("mime_type") @db.VarChar(100)
-  size      BigInt?  @db.BigInt
-  s3Key     String   @map("s3_key") @db.VarChar(500)
-  s3Bucket  String?  @map("s3_bucket") @db.VarChar(200)
+  id             String         @id @default(uuid()) @db.Uuid
+  deviceId       String?        @map("device_id") @db.Uuid
+  assignmentId   String?        @map("assignment_id") @db.Uuid
+  attachmentType AttachmentType @default(DEVICE_PHOTO) @map("attachment_type")
+  filename       String         @db.VarChar(255)
+  mimeType       String?        @map("mime_type") @db.VarChar(100)
+  size           BigInt?        @db.BigInt
+  content        Bytes          @db.ByteA
+  s3Key          String?        @map("s3_key") @db.VarChar(500)
+  s3Bucket       String?        @map("s3_bucket") @db.VarChar(200)
+  uploadedById   String?        @map("uploaded_by_id") @db.Uuid
 
-  device Device @relation(fields: [deviceId], references: [id])
+  device     Device?     @relation(fields: [deviceId], references: [id])
+  assignment Assignment? @relation(fields: [assignmentId], references: [id])
+  uploadedBy User?       @relation(fields: [uploadedById], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   @@index([deviceId])
+  @@index([assignmentId])
   @@map("attachments")
 }
 

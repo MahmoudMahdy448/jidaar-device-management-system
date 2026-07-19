@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, MapPin, Building2, User } from "lucide-react";
+import { Calendar, MapPin, Building2, User, Paperclip } from "lucide-react";
 
 interface DeviceDetailProps {
   device: Record<string, unknown> & {
@@ -44,6 +44,7 @@ interface DeviceDetailProps {
       user: { id: string; firstName: string; lastName: string; email: string };
       assignedBy?: { id: string; firstName: string; lastName: string } | null;
       returnedBy?: { id: string; firstName: string; lastName: string } | null;
+      _count?: { attachments: number };
     }>;
   };
 }
@@ -237,6 +238,7 @@ export function DeviceDetail({ device }: DeviceDetailProps) {
                   <TableHead>Return Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Assigned By</TableHead>
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -264,7 +266,15 @@ export function DeviceDetail({ device }: DeviceDetailProps) {
                     <TableCell>
                       {assignment.assignedBy
                         ? `${assignment.assignedBy.firstName} ${assignment.assignedBy.lastName}`
-                        : "—"}
+                        : "\u2014"}
+                    </TableCell>
+                    <TableCell>
+                      {assignment._count && assignment._count.attachments > 0 ? (
+                        <Badge variant="secondary" className="gap-1">
+                          <Paperclip className="size-3" />
+                          {assignment._count.attachments}
+                        </Badge>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 ))}
