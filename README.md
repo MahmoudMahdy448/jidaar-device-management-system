@@ -1,6 +1,6 @@
 # Jidaar Device Management System
 
-A comprehensive device lifecycle management platform built with Next.js 16, TypeScript, Tailwind CSS v4, shadcn/ui, Prisma 7, and NextAuth 5.
+A comprehensive device lifecycle management platform built with Next.js 16, TypeScript, Tailwind CSS v4, shadcn/ui, Prisma 6, and NextAuth 5.
 
 ## Features
 
@@ -9,7 +9,7 @@ A comprehensive device lifecycle management platform built with Next.js 16, Type
 - Device assignment, return, and transfer workflows
 - Dashboard with real-time KPIs and charts
 - Global search across devices and users
-- File attachments stored in PostgreSQL (signed forms, documents)
+- File attachments (signed forms, documents)
 - CSV export for devices and assignments
 - Activity logging for all operations
 - Light/dark mode support
@@ -18,67 +18,69 @@ A comprehensive device lifecycle management platform built with Next.js 16, Type
 
 - **Node.js 20+** — run `node -v` to check
 - **pnpm 9+** — install via `npm install -g pnpm`
-- **PostgreSQL 16+** — local install or remote instance
+- **MySQL 8.0+** — local install or remote instance
 
 ## Step-by-Step Setup (No Docker)
 
 ### 1. Clone and install dependencies
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/MahmoudMahdy448/jidaar-device-management-system.git
 cd jidaar-device-management-system
 pnpm install
 ```
 
-### 2. Install and start PostgreSQL
+### 2. Install and start MySQL
 
-**Windows** — Download from https://www.postgresql.org/download/windows/ and run the installer. Use port `5432` (default) and set a password for the `postgres` user. Alternatively, use [PostgreSQL Portable](https://www.postgresql.org/download/windows-portable/) or [Chocolatey](https://chocolatey.org/):
+**Windows** — Download from https://dev.mysql.com/downloads/installer/ and run the MySQL Installer. Use port `3306` (default) and set a password for the `root` user. Or use winget:
 
 ```bash
-choco install postgresql16
+winget install Oracle.MySQL
+```
+
+Then initialize and start:
+
+```bash
+# Initialize (first time only)
+mysqld --initialize-insecure --datadir=C:\mysql-data
+
+# Start MySQL
+Start-Process mysqld -ArgumentList "--datadir=C:\mysql-data" -WindowStyle Hidden
 ```
 
 **macOS** — Use Homebrew:
 
 ```bash
-brew install postgresql@16
-brew services start postgresql@16
+brew install mysql
+brew services start mysql
 ```
 
 **Linux (Debian/Ubuntu)**:
 
 ```bash
 sudo apt update
-sudo apt install postgresql
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
+sudo apt install mysql-server
+sudo systemctl start mysql
+sudo systemctl enable mysql
 ```
 
-Verify PostgreSQL is running:
+Verify MySQL is running:
 
 ```bash
-psql --version
+mysql --version
 ```
 
-### 3. Create the database
-
-Connect to PostgreSQL and create the database:
+### 3. Create the database and set password
 
 ```bash
-# Using the default 'postgres' user (Windows)
-psql -U postgres -h 127.0.0.1 -p 5432 -c "CREATE DATABASE jidaar;"
+# Windows
+mysql -u root -e "CREATE DATABASE jidaar;"
+mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password'; FLUSH_PRIVILEGES;"
 
-# macOS / Linux (peer auth as system user)
-sudo -u postgres psql -c "CREATE DATABASE jidaar;"
+# macOS / Linux
+sudo mysql -e "CREATE DATABASE jidaar;"
+sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password'; FLUSH PRIVILEGES;"
 ```
-
-> **Note:** If you set a password during PostgreSQL installation, you'll need to provide it. You can also create a dedicated user:
->
-> ```bash
-> psql -U postgres -h 127.0.0.1 -p 5432 -c "CREATE USER jidaar WITH PASSWORD 'secret';"
-> psql -U postgres -h 127.0.0.1 -p 5432 -c "GRANT ALL PRIVILEGES ON DATABASE jidaar TO jidaar;"
-> psql -U postgres -h 127.0.0.1 -p 5432 -d jidaar -c "GRANT ALL ON SCHEMA public TO jidaar;"
-> ```
 
 ### 4. Configure environment variables
 
@@ -91,7 +93,7 @@ cp .env.example .env
 Edit `.env` with your database connection string:
 
 ```ini
-DATABASE_URL="postgresql://postgres@127.0.0.1:5432/jidaar"
+DATABASE_URL="mysql://root:password@localhost:3306/jidaar"
 NEXTAUTH_SECRET="dev-secret-change-in-production"
 NEXTAUTH_URL="http://localhost:3000"
 ```
@@ -99,19 +101,19 @@ NEXTAUTH_URL="http://localhost:3000"
 **Connection string format:**
 
 ```
-postgresql://USER:PASSWORD@HOST:PORT/DATABASE
+mysql://USER:PASSWORD@HOST:PORT/DATABASE
 ```
 
 Common examples:
 
 | Setup | `DATABASE_URL` |
 |-------|----------------|
-| Local, no password | `postgresql://postgres@127.0.0.1:5432/jidaar` |
-| Local, with password | `postgresql://postgres:password@127.0.0.1:5432/jidaar` |
-| Dedicated user | `postgresql://jidaar:secret@127.0.0.1:5432/jidaar` |
-| Non-default port | `postgresql://postgres@127.0.0.1:5433/jidaar` |
+| Local, default password | `mysql://root:password@localhost:3306/jidaar` |
+| Local, no password | `mysql://root@localhost:3306/jidaar` |
+| Dedicated user | `mysql://jidaar:secret@localhost:3306/jidaar` |
+| Non-default port | `mysql://root:password@localhost:3307/jidaar` |
 
-> **Tip:** Do not put quotes inside the `DATABASE_URL` value. The URL must be a valid PostgreSQL connection string.
+> **Tip:** Do not put quotes inside the `DATABASE_URL` value. The URL must be a valid MySQL connection string.
 
 ### 5. Run database migrations
 
@@ -174,16 +176,16 @@ Open http://localhost:3000 in your browser.
 
 ## Troubleshooting
 
-### `password authentication failed` / `connection refused`
+### `Access denied` / `connection refused`
 
-- Verify PostgreSQL is running: `pg_isready -h 127.0.0.1 -p 5432`
+- Verify MySQL is running: `mysql -u root -p -e "SELECT 1;"`
 - Check your `DATABASE_URL` matches the user, password, host, and port
 - Ensure the `jidaar` database exists
 
 ### `P3009: Failed to create database` (migration error)
 
 - Make sure the database exists and the user in `DATABASE_URL` has full privileges
-- Run: `psql -U postgres -h 127.0.0.1 -p 5432 -d jidaar -c "GRANT ALL ON SCHEMA public TO postgres;"`
+- Run: `mysql -u root -p -e "GRANT ALL PRIVILEGES ON jidaar.* TO 'root'@'localhost'; FLUSH PRIVILEGES;"`
 
 ### Port conflict on 3000
 
@@ -258,13 +260,13 @@ pnpm test -- --run tests/integration/
 
 ## Deployment
 
-For cloud deployment (e.g., Supabase, Vercel, Railway), ensure the following environment variables are set:
+For cloud deployment (e.g., GoDaddy cPanel, Vercel, Railway), ensure the following environment variables are set:
 
-- `DATABASE_URL` — PostgreSQL connection string
+- `DATABASE_URL` — MySQL connection string
 - `NEXTAUTH_SECRET` — Random secret for NextAuth session encryption
 - `NEXTAUTH_URL` — Your production URL
 
-See `ARCHITECTURE.md` for connection pooling details.
+See `ARCHITECTURE.md` for additional details.
 
 ## License
 
