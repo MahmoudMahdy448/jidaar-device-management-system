@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    await requirePermission("assignments:write");
+    const session = await requirePermission("assignments:write");
     const body = await request.json();
     const parsed = TransferAssignmentSchema.safeParse(body);
 
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
         data: {
           deviceId: currentAssignment.deviceId,
           userId: newUserId,
-          assignedById: currentAssignment.userId,
+          assignedById: session.user.id,
           assignmentDate: transferDate,
           expectedReturnDate: currentAssignment.expectedReturnDate,
           conditionBefore: currentAssignment.conditionAfter,

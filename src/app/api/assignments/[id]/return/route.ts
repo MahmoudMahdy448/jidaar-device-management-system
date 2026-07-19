@@ -17,7 +17,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requirePermission("assignments:write");
+    const session = await requirePermission("assignments:write");
     const { id } = await params;
     const body = await request.json();
     const parsed = ReturnAssignmentSchema.safeParse(body);
@@ -65,7 +65,7 @@ export async function POST(
           returnDate,
           closedReason,
           conditionAfter: conditionAfter ?? null,
-          returnedById: null,
+          returnedById: session.user.id,
           notes: notes ?? assignment.notes,
         },
       });

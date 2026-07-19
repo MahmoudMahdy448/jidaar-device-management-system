@@ -114,17 +114,19 @@ export async function PUT(
     const oldRecord = Object.fromEntries(
       DEVICE_TRACKED_FIELDS.map((f) => [f, (existing as Record<string, unknown>)[f]])
     );
-    const newRecord = parsed.data;
+    // Strip assignedUserId — it's a form-only field for initial assignment, not a Prisma Device column
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { assignedUserId, ...deviceData } = parsed.data;
 
     const changes = computeChanges(
       oldRecord,
-      newRecord as Record<string, unknown>,
+      deviceData as Record<string, unknown>,
       DEVICE_TRACKED_FIELDS
     );
 
     const device = await prisma.device.update({
       where: { id },
-      data: parsed.data,
+      data: deviceData,
     });
 
     if (changes) {

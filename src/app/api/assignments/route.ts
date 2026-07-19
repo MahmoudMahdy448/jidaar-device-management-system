@@ -114,7 +114,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requirePermission("assignments:write");
+    const session = await requirePermission("assignments:write");
     const body = await request.json();
     const parsed = AssignmentSchema.safeParse(body);
 
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
 
     const result = await prisma.$transaction(async (tx) => {
       const device = await tx.$queryRawUnsafe<{ id: string; statusId: string }[]>(
-        'SELECT "id", "status_id" AS "statusId" FROM "devices" WHERE "id" = $1 AND "deleted_at" IS NULL FOR UPDATE',
+        'SELECT `id`, `status_id` AS `statusId` FROM `devices` WHERE `id` = ? AND `deleted_at` IS NULL FOR UPDATE',
         deviceId
       );
 
@@ -180,7 +180,7 @@ export async function POST(request: Request) {
         data: {
           deviceId,
           userId,
-          assignedById: parsed.data.assignedById ?? null,
+          assignedById: session.user.id,
           assignmentDate,
           expectedReturnDate: expectedReturnDate ?? null,
           conditionBefore: conditionBefore ?? null,
